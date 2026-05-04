@@ -10,6 +10,9 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous" />
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
     <style>
       html, body, #root { background: transparent; }
     </style>
@@ -59,6 +62,39 @@
           }
         }, [name]);
         return <span ref={ref} className={className} style={style} />;
+      };
+
+      // ─── Math text renderer (KaTeX) ─────────────────────────────────────
+      // Renders text that may contain $...$, $$...$$, \(...\), \[...\] as math.
+      // Falls back to plain text if KaTeX hasn't loaded yet (and re-tries).
+      const MathText = ({ children, className, style, as = "div" }) => {
+        const ref = useRef(null);
+        useEffect(() => {
+          let cancelled = false;
+          const render = () => {
+            if (cancelled || !ref.current) return;
+            if (window.renderMathInElement) {
+              try {
+                window.renderMathInElement(ref.current, {
+                  delimiters: [
+                    { left: "$$", right: "$$", display: true },
+                    { left: "$", right: "$", display: false },
+                    { left: "\\(", right: "\\)", display: false },
+                    { left: "\\[", right: "\\]", display: true },
+                  ],
+                  throwOnError: false,
+                  errorColor: "#7c2d29",
+                });
+              } catch (e) { /* swallow render errors per-element */ }
+            } else {
+              setTimeout(render, 120);
+            }
+          };
+          render();
+          return () => { cancelled = true; };
+        }, [children]);
+        const Tag = as;
+        return <Tag ref={ref} className={className} style={style}>{children}</Tag>;
       };
 
       // ─── Helpers ────────────────────────────────────────────────────────
@@ -269,6 +305,13 @@ If no medal system, use defaults gold=90, silver=75, bronze=60.`;
 
             log("Generating practice questions at matched difficulty…");
             const genSystem = `You are an expert exam question writer. Generate exactly ${cappedNumQ} fresh ORIGINAL practice questions matching the difficulty, subjects, and format of the sample.
+
+FORMATTING RULES FOR MATH:
+- Wrap inline math in single dollar signs: $x^2 + 1$, $-3$, $\\frac{a}{b}$.
+- Wrap display math in double dollar signs: $$\\int_0^1 x\\,dx$$.
+- Use standard LaTeX commands. KaTeX will render the output.
+- Do NOT use $...$ for non-math content (currency, plain numbers in prose). Only wrap actual math.
+- For simple integers in plain English ("the temperature was -3 degrees"), do NOT wrap in $...$ — write them as plain text.
 
 Return EXACTLY this JSON:
 {
@@ -704,7 +747,7 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
                   </button>
                 </div>
                 <div className="hairline my-5" />
-                <div className="font-display text-xl sm:text-[22px] leading-relaxed whitespace-pre-wrap">{q?.text}</div>
+                <MathText className="font-display text-xl sm:text-[22px] leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>{q?.text}</MathText>
 
                 {q?.type === "mcq" && (
                   <div className="mt-7 space-y-3">
@@ -720,7 +763,7 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
                                  style={selected ? { background: "#1a1612", color: "#fbf6ec" } : { border: "1px solid #1a161240" }}>
                               {letter}
                             </div>
-                            <div className="font-body text-base leading-relaxed">{opt}</div>
+                            <MathText className="font-body text-base leading-relaxed">{opt}</MathText>
                           </div>
                         </button>
                       );
@@ -888,7 +931,7 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
                     Q{idx + 1} · {q.subject || "—"} · {q.isCorrect ? "Correct" : wasAttempted ? "Incorrect" : "Skipped"}
                   </div>
                   <div className="font-display text-base mt-1 leading-snug" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                    {q.text}
+                    {(q.text || "").replace(/\$\$([^$]+)\$\$/g, "$1").replace(/\$([^$]+)\$/g, "$1")}
                   </div>
                 </div>
               </div>
@@ -896,7 +939,7 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
             {open && (
               <div className="mt-4 pl-8">
                 <div className="hairline mb-4" />
-                <div className="font-body text-base mb-4 whitespace-pre-wrap">{q.text}</div>
+                <MathText className="font-body text-base mb-4" style={{ whiteSpace: "pre-wrap" }}>{q.text}</MathText>
                 {q.type === "mcq" && (
                   <div className="space-y-2">
                     {q.options.map((opt, i) => {
@@ -909,7 +952,7 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
                                border: `1px solid ${isCorrect ? "#1f6e3540" : isUser ? "#7c2d2940" : "#1a161215"}`,
                              }}>
                           <span className="font-mono text-xs ink-mute w-5">{String.fromCharCode(65 + i)}</span>
-                          <span className="flex-1">{opt}</span>
+                          <MathText as="span" className="flex-1">{opt}</MathText>
                           {isCorrect && <span className="font-body text-[10px] uppercase tracking-[0.18em]" style={{ color: "#1f6e35" }}>Correct</span>}
                           {isUser && !isCorrect && <span className="font-body text-[10px] uppercase tracking-[0.18em] accent">Your answer</span>}
                         </div>
@@ -926,7 +969,7 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
                 {q.explanation && (
                   <div className="font-body mt-4 rounded-lg p-3 text-sm leading-relaxed" style={{ background: "#ffffff66" }}>
                     <div className="text-[11px] uppercase tracking-[0.18em] ink-mute mb-1">Solution</div>
-                    {q.explanation}
+                    <MathText>{q.explanation}</MathText>
                   </div>
                 )}
               </div>
