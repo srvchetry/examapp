@@ -108,7 +108,8 @@
       async function callClaude({ messages, system, tools, max_tokens = 4096 }) {
         const apiKey = window.__GET_ANTHROPIC_KEY();
         if (!apiKey) throw new Error("NO_API_KEY");
-        const body = { model: "claude-sonnet-4-20250514", max_tokens, messages };
+        const model = localStorage.getItem("anthropic_model") || "claude-sonnet-4-6";
+        const body = { model, max_tokens, messages };
         if (system) body.system = system;
         if (tools) body.tools = tools;
         const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -949,17 +950,77 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
         );
       }
 
+      const MODEL_OPTIONS = [
+        { id: "claude-sonnet-4-6", label: "Sonnet 4.6 — recommended", hint: "Balanced speed and quality" },
+        { id: "claude-opus-4-7", label: "Opus 4.7 — best quality", hint: "Slower, higher cost" },
+        { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5 — fastest", hint: "Cheapest, may produce fewer questions" },
+      ];
+
+      function ModelSelector({ selected, onChange }) {
+        return (
+          <div className="mt-5">
+            <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mb-2">Model</div>
+            <div className="space-y-2">
+              {MODEL_OPTIONS.map((m) => {
+                const active = selected === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => onChange(m.id)}
+                    className="w-full text-left rounded-xl px-3 py-2.5 transition-all"
+                    style={{
+                      border: active ? "1px solid #1a1612" : "1px solid #1a161220",
+                      background: active ? "#1a161208" : "transparent",
+                    }}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div
+                        className="grid h-4 w-4 shrink-0 place-items-center rounded-full mt-0.5"
+                        style={{
+                          border: active ? "1px solid #1a1612" : "1px solid #1a161240",
+                        }}
+                      >
+                        {active && (
+                          <div
+                            className="h-2 w-2 rounded-full"
+                            style={{ background: "#1a1612" }}
+                          />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-body text-sm">{m.label}</div>
+                        <div className="font-mono text-[10px] ink-mute mt-0.5 break-all">
+                          {m.id} · {m.hint}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
       function KeyModal({ onClose }) {
         const existing = window.__GET_ANTHROPIC_KEY();
         const [mode, setMode] = useState(existing ? "view" : "edit");
         const [input, setInput] = useState("");
         const [reveal, setReveal] = useState(false);
         const [justSaved, setJustSaved] = useState(false);
+        const [selectedModel, setSelectedModel] = useState(
+          localStorage.getItem("anthropic_model") || "claude-sonnet-4-6"
+        );
         const inputRef = useRef(null);
 
         useEffect(() => {
           if (mode === "edit" && inputRef.current) inputRef.current.focus();
         }, [mode]);
+
+        const updateModel = (id) => {
+          setSelectedModel(id);
+          localStorage.setItem("anthropic_model", id);
+        };
 
         const save = () => {
           const trimmed = input.trim();
@@ -987,7 +1048,7 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-2">Credentials</div>
-                  <div className="font-display text-2xl">Anthropic API key</div>
+                  <div className="font-display text-2xl">API settings</div>
                 </div>
                 <button onClick={onClose} className="ink-mute hover:ink shrink-0" aria-label="Close">
                   <Icon name="x" className="h-5 w-5" />
@@ -1012,6 +1073,9 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
                       {reveal ? "Hide" : "Reveal"}
                     </button>
                   </div>
+
+                  <ModelSelector selected={selectedModel} onChange={updateModel} />
+
                   {justSaved && (
                     <div className="font-body mt-3 text-xs accent">✓ Key updated.</div>
                   )}
@@ -1065,6 +1129,9 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
                   <p className="font-body ink-mute text-[11px] mt-2">
                     Stored in your browser's localStorage on this device only.
                   </p>
+
+                  <ModelSelector selected={selectedModel} onChange={updateModel} />
+
                   <div className="mt-6 flex justify-end gap-2">
                     {currentKey && (
                       <button onClick={() => setMode("view")} className="font-body btn-ghost rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]">
