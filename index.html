@@ -1,4 +1,5 @@
 <!doctype html>
+
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -10,9 +11,9 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous" />
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" />
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
     <style>
       html, body, #root { background: transparent; }
     </style>
@@ -20,1184 +21,1179 @@
   <body>
     <div id="root"></div>
 
-    <!--
-      ANTHROPIC API KEY
-      ─────────────────
-      Set your key here OR set window.ANTHROPIC_API_KEY in the browser console
-      OR paste it into the prompt that appears the first time you click "Analyse".
-      The key is stored in localStorage on your machine and never sent anywhere
-      except api.anthropic.com.
-    -->
-    <script>
-      // Returns the stored key, or null if none. Does NOT prompt — the React UI
-      // handles the prompt flow now via a key-management modal.
-      window.__GET_ANTHROPIC_KEY = function () {
-        const k = window.ANTHROPIC_API_KEY || localStorage.getItem("anthropic_api_key");
-        return k ? k.trim() : null;
-      };
-      window.__SET_ANTHROPIC_KEY = function (k) {
-        if (k && k.trim()) localStorage.setItem("anthropic_api_key", k.trim());
-      };
-      window.__FORGET_ANTHROPIC_KEY = function () {
-        localStorage.removeItem("anthropic_api_key");
-      };
-      window.__MASK_KEY = function (k) {
-        if (!k) return "";
-        if (k.length <= 12) return "•".repeat(k.length);
-        return k.slice(0, 7) + "…" + k.slice(-4);
-      };
-    </script>
+```
+<!--
+  ANTHROPIC API KEY
+  ─────────────────
+  Set your key here OR set window.ANTHROPIC_API_KEY in the browser console
+  OR paste it into the prompt that appears the first time you click "Analyse".
+  The key is stored in localStorage on your machine and never sent anywhere
+  except api.anthropic.com.
+-->
+<script>
+  // Returns the stored key, or null if none. Does NOT prompt — the React UI
+  // handles the prompt flow now via a key-management modal.
+  window.__GET_ANTHROPIC_KEY = function () {
+    const k = window.ANTHROPIC_API_KEY || localStorage.getItem("anthropic_api_key");
+    return k ? k.trim() : null;
+  };
+  window.__SET_ANTHROPIC_KEY = function (k) {
+    if (k && k.trim()) localStorage.setItem("anthropic_api_key", k.trim());
+  };
+  window.__FORGET_ANTHROPIC_KEY = function () {
+    localStorage.removeItem("anthropic_api_key");
+  };
+  window.__MASK_KEY = function (k) {
+    if (!k) return "";
+    if (k.length <= 12) return "•".repeat(k.length);
+    return k.slice(0, 7) + "…" + k.slice(-4);
+  };
+</script>
 
-    <script type="text/babel" data-presets="react" data-type="module">
-      const { useState, useEffect, useRef, useCallback } = React;
+<script type="text/babel" data-presets="react" data-type="module">
+  const { useState, useEffect, useRef, useCallback } = React;
 
-      // Lucide icon helper
-      const Icon = ({ name, className = "h-4 w-4", style }) => {
-        const ref = useRef(null);
-        useEffect(() => {
-          if (ref.current) {
-            ref.current.innerHTML = "";
-            const svg = lucide.icons[name]?.toSvg({ "stroke-width": 1.75 });
-            if (svg) ref.current.innerHTML = svg;
-          }
-        }, [name]);
-        return <span ref={ref} className={className} style={style} />;
-      };
-
-      // ─── Math text renderer (KaTeX) ─────────────────────────────────────
-      // Renders text that may contain $...$, $$...$$, \(...\), \[...\] as math.
-      // Falls back to plain text if KaTeX hasn't loaded yet (and re-tries).
-      const MathText = ({ children, className, style, as = "div" }) => {
-        const ref = useRef(null);
-        useEffect(() => {
-          let cancelled = false;
-          const render = () => {
-            if (cancelled || !ref.current) return;
-            if (window.renderMathInElement) {
-              try {
-                window.renderMathInElement(ref.current, {
-                  delimiters: [
-                    { left: "$$", right: "$$", display: true },
-                    { left: "$", right: "$", display: false },
-                    { left: "\\(", right: "\\)", display: false },
-                    { left: "\\[", right: "\\]", display: true },
-                  ],
-                  throwOnError: false,
-                  errorColor: "#7c2d29",
-                });
-              } catch (e) { /* swallow render errors per-element */ }
-            } else {
-              setTimeout(render, 120);
-            }
-          };
-          render();
-          return () => { cancelled = true; };
-        }, [children]);
-        const Tag = as;
-        return <Tag ref={ref} className={className} style={style}>{children}</Tag>;
-      };
-
-      // ─── Helpers ────────────────────────────────────────────────────────
-      const fileToBase64 = (file) =>
-        new Promise((resolve, reject) => {
-          const r = new FileReader();
-          r.onload = () => resolve(r.result.split(",")[1]);
-          r.onerror = () => reject(new Error("Failed to read file"));
-          r.readAsDataURL(file);
-        });
-      const fileToText = (file) =>
-        new Promise((resolve, reject) => {
-          const r = new FileReader();
-          r.onload = () => resolve(r.result);
-          r.onerror = () => reject(new Error("Failed to read file"));
-          r.readAsText(file);
-        });
-      const formatTime = (s) => {
-        if (s < 0) s = 0;
-        const h = Math.floor(s / 3600);
-        const m = Math.floor((s % 3600) / 60);
-        const sec = s % 60;
-        if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-        return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-      };
-      const stripCodeFences = (txt) =>
-        (txt || "").replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
-      const extractJSON = (txt) => {
-        const cleaned = stripCodeFences(txt);
-        try { return JSON.parse(cleaned); } catch {}
-        const startObj = cleaned.indexOf("{");
-        const startArr = cleaned.indexOf("[");
-        let start = -1;
-        if (startObj === -1) start = startArr;
-        else if (startArr === -1) start = startObj;
-        else start = Math.min(startObj, startArr);
-        if (start === -1) throw new Error("No JSON in response");
-        const candidate = cleaned.slice(start);
-        for (let end = candidate.length; end > 0; end--) {
-          try { return JSON.parse(candidate.slice(0, end)); } catch {}
-        }
-        throw new Error("Unparseable JSON");
-      };
-      const collectText = (data) =>
-        (data?.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
-
-      async function callClaude({ messages, system, tools, max_tokens = 4096 }) {
-        const apiKey = window.__GET_ANTHROPIC_KEY();
-        if (!apiKey) throw new Error("NO_API_KEY");
-        const model = localStorage.getItem("anthropic_model") || "claude-sonnet-4-6";
-        const body = { model, max_tokens, messages };
-        if (system) body.system = system;
-        if (tools) body.tools = tools;
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-            "anthropic-dangerous-direct-browser-access": "true",
-          },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) {
-          const t = await res.text();
-          throw new Error(`API ${res.status}: ${t.slice(0, 250)}`);
-        }
-        return res.json();
+  // Lucide icon helper
+  const Icon = ({ name, className = "h-4 w-4", style }) => {
+    const ref = useRef(null);
+    useEffect(() => {
+      if (ref.current) {
+        ref.current.innerHTML = "";
+        const svg = lucide.icons[name]?.toSvg({ "stroke-width": 1.75 });
+        if (svg) ref.current.innerHTML = svg;
       }
+    }, [name]);
+    return <span ref={ref} className={className} style={style} />;
+  };
 
-      // ─── Local persistence for percentile cohort ────────────────────────
-      const scoresKey = (examType) =>
-        `atrium:scores:${(examType || "generic").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 80)}`;
-      const getHistory = (examType) => {
-        try { return JSON.parse(localStorage.getItem(scoresKey(examType)) || "[]"); }
-        catch { return []; }
-      };
-      const saveScore = (examType, percentage) => {
-        const list = getHistory(examType);
-        list.push({ percentage, ts: Date.now() });
-        const trimmed = list.slice(-500);
-        localStorage.setItem(scoresKey(examType), JSON.stringify(trimmed));
-        return trimmed;
-      };
-      const computePercentile = (history, score) => {
-        if (!history?.length) return null;
-        const below = history.filter(h => h.percentage < score).length;
-        return Math.round((below / history.length) * 100);
-      };
-
-      // ─── Decorative grain ───────────────────────────────────────────────
-      const PaperGrain = () => (
-        <svg className="pointer-events-none fixed inset-0 h-full w-full opacity-[0.04] mix-blend-multiply" aria-hidden="true">
-          <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="3" /><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0" /></filter>
-          <rect width="100%" height="100%" filter="url(#grain)" />
-        </svg>
-      );
-
-      // ─── App ────────────────────────────────────────────────────────────
-      function App() {
-        const [screen, setScreen] = useState("upload");
-        const [files, setFiles] = useState([]);
-        const [testName, setTestName] = useState("");
-        const [examInfo, setExamInfo] = useState(null);
-        const [questions, setQuestions] = useState([]);
-        const [answers, setAnswers] = useState({});
-        const [marked, setMarked] = useState({});
-        const [currentQ, setCurrentQ] = useState(0);
-        const [timeLeft, setTimeLeft] = useState(0);
-        const [examStarted, setExamStarted] = useState(false);
-        const [analysisLog, setAnalysisLog] = useState([]);
-        const [scoreData, setScoreData] = useState(null);
-        const [error, setError] = useState(null);
-        const [showFinishConfirm, setShowFinishConfirm] = useState(false);
-        const [showKeyModal, setShowKeyModal] = useState(false);
-        const timerRef = useRef(null);
-        const dragRef = useRef(null);
-
-        useEffect(() => {
-          if (screen === "exam" && examStarted && timeLeft > 0) {
-            timerRef.current = setInterval(() => {
-              setTimeLeft(t => {
-                if (t <= 1) { clearInterval(timerRef.current); handleSubmit(true); return 0; }
-                return t - 1;
-              });
-            }, 1000);
-            return () => clearInterval(timerRef.current);
-          }
-        }, [screen, examStarted]);
-
-        const onFiles = (fileList) => {
-          const arr = Array.from(fileList || []);
-          const valid = arr.filter(f => {
-            const ok = f.type === "application/pdf" || f.type.startsWith("image/") ||
-                       f.type === "text/plain" || f.name.toLowerCase().endsWith(".txt") ||
-                       f.name.toLowerCase().endsWith(".md");
-            return ok && f.size < 30 * 1024 * 1024;
-          });
-          setFiles(prev => [...prev, ...valid]);
-        };
-        const removeFile = (idx) => setFiles(prev => prev.filter((_, i) => i !== idx));
-        const onDrop = (e) => { e.preventDefault(); dragRef.current?.classList.remove("ring-2"); onFiles(e.dataTransfer.files); };
-        const onDragOver = (e) => { e.preventDefault(); dragRef.current?.classList.add("ring-2"); };
-        const onDragLeave = (e) => { e.preventDefault(); dragRef.current?.classList.remove("ring-2"); };
-        const log = (msg) => setAnalysisLog(prev => [...prev, msg]);
-
-        const analyzeExam = async () => {
-          setError(null); setAnalysisLog([]); setScreen("analyzing");
+  // ─── Math text renderer (KaTeX) ─────────────────────────────────────
+  // Renders text containing $...$, $$...$$, \(...\), \[...\] as math.
+  const MathText = ({ children, className, style, as = "div" }) => {
+    const ref = useRef(null);
+    useEffect(() => {
+      let cancelled = false;
+      let attempts = 0;
+      const render = () => {
+        if (cancelled || !ref.current) return;
+        if (window.renderMathInElement) {
           try {
-            log("Reading uploaded papers…");
-            const fileBlocks = [];
-            for (const f of files) {
-              if (f.type === "application/pdf") {
-                const data = await fileToBase64(f);
-                fileBlocks.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data } });
-              } else if (f.type.startsWith("image/")) {
-                const data = await fileToBase64(f);
-                fileBlocks.push({ type: "image", source: { type: "base64", media_type: f.type, data } });
-              } else {
-                const txt = await fileToText(f);
-                fileBlocks.push({ type: "text", text: `[File: ${f.name}]\n${txt.slice(0, 50000)}` });
-              }
-            }
+            window.renderMathInElement(ref.current, {
+              delimiters: [
+                { left: "$$", right: "$$", display: true },
+                { left: "$", right: "$", display: false },
+                { left: "\\(", right: "\\)", display: false },
+                { left: "\\[", right: "\\]", display: true },
+              ],
+              throwOnError: false,
+              errorColor: "#7c2d29",
+              ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
+            });
+          } catch (e) {
+            console.warn("KaTeX render failed:", e);
+          }
+        } else if (attempts < 40) {
+          attempts += 1;
+          setTimeout(render, 100);
+        } else {
+          console.warn("KaTeX did not load after 4s; rendering plain text.");
+        }
+      };
+      render();
+      return () => { cancelled = true; };
+    }, [children]);
+    const Tag = as;
+    return <Tag ref={ref} className={className} style={style}>{children}</Tag>;
+  };
 
-            log("Identifying the exam and looking up its standards on the web…");
-            const analysisSystem = `You are an expert academic exam analyst. You will receive sample exam papers and a user-provided test name.
+  // ─── Helpers ────────────────────────────────────────────────────────
+  const fileToBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result.split(",")[1]);
+      r.onerror = () => reject(new Error("Failed to read file"));
+      r.readAsDataURL(file);
+    });
+  const fileToText = (file) =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error("Failed to read file"));
+      r.readAsText(file);
+    });
+  const formatTime = (s) => {
+    if (s < 0) s = 0;
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+    return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  };
+  const stripCodeFences = (txt) =>
+    (txt || "").replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+  const extractJSON = (txt) => {
+    const cleaned = stripCodeFences(txt);
+    try { return JSON.parse(cleaned); } catch {}
+    const startObj = cleaned.indexOf("{");
+    const startArr = cleaned.indexOf("[");
+    let start = -1;
+    if (startObj === -1) start = startArr;
+    else if (startArr === -1) start = startObj;
+    else start = Math.min(startObj, startArr);
+    if (start === -1) throw new Error("No JSON in response");
+    const candidate = cleaned.slice(start);
+    for (let end = candidate.length; end > 0; end--) {
+      try { return JSON.parse(candidate.slice(0, end)); } catch {}
+    }
+    throw new Error("Unparseable JSON");
+  };
+  const collectText = (data) =>
+    (data?.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+
+  async function callClaude({ messages, system, tools, max_tokens = 4096 }) {
+    const apiKey = window.__GET_ANTHROPIC_KEY();
+    if (!apiKey) throw new Error("NO_API_KEY");
+    const model = localStorage.getItem("anthropic_model") || "claude-sonnet-4-6";
+    const body = { model, max_tokens, messages };
+    if (system) body.system = system;
+    if (tools) body.tools = tools;
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`API ${res.status}: ${t.slice(0, 250)}`);
+    }
+    return res.json();
+  }
+
+  // ─── Local persistence for percentile cohort ────────────────────────
+  const scoresKey = (examType) =>
+    `atrium:scores:${(examType || "generic").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 80)}`;
+  const getHistory = (examType) => {
+    try { return JSON.parse(localStorage.getItem(scoresKey(examType)) || "[]"); }
+    catch { return []; }
+  };
+  const saveScore = (examType, percentage) => {
+    const list = getHistory(examType);
+    list.push({ percentage, ts: Date.now() });
+    const trimmed = list.slice(-500);
+    localStorage.setItem(scoresKey(examType), JSON.stringify(trimmed));
+    return trimmed;
+  };
+  const computePercentile = (history, score) => {
+    if (!history?.length) return null;
+    const below = history.filter(h => h.percentage < score).length;
+    return Math.round((below / history.length) * 100);
+  };
+
+  // ─── Decorative grain ───────────────────────────────────────────────
+  const PaperGrain = () => (
+    <svg className="pointer-events-none fixed inset-0 h-full w-full opacity-[0.04] mix-blend-multiply" aria-hidden="true">
+      <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="3" /><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0" /></filter>
+      <rect width="100%" height="100%" filter="url(#grain)" />
+    </svg>
+  );
+
+  // ─── App ────────────────────────────────────────────────────────────
+  function App() {
+    const [screen, setScreen] = useState("upload");
+    const [files, setFiles] = useState([]);
+    const [testName, setTestName] = useState("");
+    const [examInfo, setExamInfo] = useState(null);
+    const [questions, setQuestions] = useState([]);
+    const [answers, setAnswers] = useState({});
+    const [marked, setMarked] = useState({});
+    const [currentQ, setCurrentQ] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(0);
+    const [examStarted, setExamStarted] = useState(false);
+    const [analysisLog, setAnalysisLog] = useState([]);
+    const [scoreData, setScoreData] = useState(null);
+    const [error, setError] = useState(null);
+    const [showFinishConfirm, setShowFinishConfirm] = useState(false);
+    const [showKeyModal, setShowKeyModal] = useState(false);
+    const timerRef = useRef(null);
+    const dragRef = useRef(null);
+
+    useEffect(() => {
+      if (screen === "exam" && examStarted && timeLeft > 0) {
+        timerRef.current = setInterval(() => {
+          setTimeLeft(t => {
+            if (t <= 1) { clearInterval(timerRef.current); handleSubmit(true); return 0; }
+            return t - 1;
+          });
+        }, 1000);
+        return () => clearInterval(timerRef.current);
+      }
+    }, [screen, examStarted]);
+
+    const onFiles = (fileList) => {
+      const arr = Array.from(fileList || []);
+      const valid = arr.filter(f => {
+        const ok = f.type === "application/pdf" || f.type.startsWith("image/") ||
+                   f.type === "text/plain" || f.name.toLowerCase().endsWith(".txt") ||
+                   f.name.toLowerCase().endsWith(".md");
+        return ok && f.size < 30 * 1024 * 1024;
+      });
+      setFiles(prev => [...prev, ...valid]);
+    };
+    const removeFile = (idx) => setFiles(prev => prev.filter((_, i) => i !== idx));
+    const onDrop = (e) => { e.preventDefault(); dragRef.current?.classList.remove("ring-2"); onFiles(e.dataTransfer.files); };
+    const onDragOver = (e) => { e.preventDefault(); dragRef.current?.classList.add("ring-2"); };
+    const onDragLeave = (e) => { e.preventDefault(); dragRef.current?.classList.remove("ring-2"); };
+    const log = (msg) => setAnalysisLog(prev => [...prev, msg]);
+
+    const analyzeExam = async () => {
+      setError(null); setAnalysisLog([]); setScreen("analyzing");
+      try {
+        log("Reading uploaded papers…");
+        const fileBlocks = [];
+        for (const f of files) {
+          if (f.type === "application/pdf") {
+            const data = await fileToBase64(f);
+            fileBlocks.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data } });
+          } else if (f.type.startsWith("image/")) {
+            const data = await fileToBase64(f);
+            fileBlocks.push({ type: "image", source: { type: "base64", media_type: f.type, data } });
+          } else {
+            const txt = await fileToText(f);
+            fileBlocks.push({ type: "text", text: `[File: ${f.name}]\n${txt.slice(0, 50000)}` });
+          }
+        }
+
+        log("Identifying the exam and looking up its standards on the web…");
+        const analysisSystem = `You are an expert academic exam analyst. You will receive sample exam papers and a user-provided test name.
+```
 
 Your job:
+
 1. Identify what exam this is (e.g., SAT, JEE Main, UPSC Prelims, GRE Quant, IGCSE Maths, AMC 10).
-2. Use web_search to confirm the OFFICIAL standard format: total duration, number of questions, question types, marking scheme, medal/grade thresholds.
-3. Determine subjects and difficulty profile.
+1. Use web_search to confirm the OFFICIAL standard format: total duration, number of questions, question types, marking scheme, medal/grade thresholds.
+1. Determine subjects and difficulty profile.
 
 Return EXACTLY this JSON (no commentary, no markdown fences):
 {
-  "exam_name": "Full official name",
-  "exam_short": "short slug",
-  "subjects": ["..."],
-  "duration_minutes": <int>,
-  "num_questions": <int>,
-  "question_format": "MCQ" | "MCQ+Numeric" | "Mixed",
-  "marking_scheme": "human-readable",
-  "negative_marking": <number>,
-  "difficulty": "easy" | "medium" | "hard" | "very hard",
-  "medals": { "gold_pct": <int>, "silver_pct": <int>, "bronze_pct": <int> },
-  "rationale": "2-3 sentences."
+“exam_name”: “Full official name”,
+“exam_short”: “short slug”,
+“subjects”: [”…”],
+“duration_minutes”: <int>,
+“num_questions”: <int>,
+“question_format”: “MCQ” | “MCQ+Numeric” | “Mixed”,
+“marking_scheme”: “human-readable”,
+“negative_marking”: <number>,
+“difficulty”: “easy” | “medium” | “hard” | “very hard”,
+“medals”: { “gold_pct”: <int>, “silver_pct”: <int>, “bronze_pct”: <int> },
+“rationale”: “2-3 sentences.”
 }
 
 If no medal system, use defaults gold=90, silver=75, bronze=60.`;
 
-            const userContent = [
-              ...fileBlocks,
-              { type: "text", text: `User-provided test name: "${testName || "(not provided)"}"\n\nAnalyze and produce the JSON.` }
-            ];
-            const analysis = await callClaude({
-              system: analysisSystem,
-              messages: [{ role: "user", content: userContent }],
-              tools: [{ type: "web_search_20250305", name: "web_search" }],
-              max_tokens: 3500,
-            });
-            const analysisText = collectText(analysis);
-            let info;
-            try { info = extractJSON(analysisText); }
-            catch { throw new Error("Could not parse exam analysis: " + analysisText.slice(0, 250)); }
-            log(`Identified: ${info.exam_name}`);
-            log(`Standard: ${info.duration_minutes} minutes, ${info.num_questions} questions`);
-            const cappedNumQ = Math.min(info.num_questions || 20, 60);
-            info.num_questions = cappedNumQ;
+```
+        const userContent = [
+          ...fileBlocks,
+          { type: "text", text: `User-provided test name: "${testName || "(not provided)"}"\n\nAnalyze and produce the JSON.` }
+        ];
+        const analysis = await callClaude({
+          system: analysisSystem,
+          messages: [{ role: "user", content: userContent }],
+          tools: [{ type: "web_search_20250305", name: "web_search" }],
+          max_tokens: 3500,
+        });
+        const analysisText = collectText(analysis);
+        let info;
+        try { info = extractJSON(analysisText); }
+        catch { throw new Error("Could not parse exam analysis: " + analysisText.slice(0, 250)); }
+        log(`Identified: ${info.exam_name}`);
+        log(`Standard: ${info.duration_minutes} minutes, ${info.num_questions} questions`);
+        const cappedNumQ = Math.min(info.num_questions || 20, 60);
+        info.num_questions = cappedNumQ;
 
-            log("Generating practice questions at matched difficulty…");
-            const genSystem = `You are an expert exam question writer. Generate exactly ${cappedNumQ} fresh ORIGINAL practice questions matching the difficulty, subjects, and format of the sample.
+        log("Generating practice questions at matched difficulty…");
+        const genSystem = `You are an expert exam question writer. Generate exactly ${cappedNumQ} fresh ORIGINAL practice questions matching the difficulty, subjects, and format of the sample.
+```
 
 FORMATTING RULES FOR MATH:
-- Wrap inline math in single dollar signs: $x^2 + 1$, $-3$, $\\frac{a}{b}$.
-- Wrap display math in double dollar signs: $$\\int_0^1 x\\,dx$$.
+
+- Wrap inline math in single dollar signs: $x^2 + 1$, $-3$, $\frac{a}{b}$.
+- Wrap display math in double dollar signs: $$\int_0^1 x\,dx$$.
 - Use standard LaTeX commands. KaTeX will render the output.
-- Do NOT use $...$ for non-math content (currency, plain numbers in prose). Only wrap actual math.
-- For simple integers in plain English ("the temperature was -3 degrees"), do NOT wrap in $...$ — write them as plain text.
+- Do NOT use $…$ for non-math content (currency, plain numbers in prose). Only wrap actual math.
+- For simple integers in plain English (“the temperature was -3 degrees”), do NOT wrap in $…$ — write them as plain text.
 
 Return EXACTLY this JSON:
 {
-  "questions": [
-    {
-      "id": 1,
-      "subject": "string",
-      "type": "mcq" | "numeric",
-      "text": "Full question text. Use plain text or simple LaTeX in $...$ for math.",
-      "options": ["A", "B", "C", "D"],
-      "correct_index": 0,
-      "correct_value": "42.5",
-      "tolerance": 0.01,
-      "marks": 1,
-      "explanation": "1-3 sentence solution."
-    }
-  ]
+“questions”: [
+{
+“id”: 1,
+“subject”: “string”,
+“type”: “mcq” | “numeric”,
+“text”: “Full question text. Use plain text or simple LaTeX in $…$ for math.”,
+“options”: [“A”, “B”, “C”, “D”],
+“correct_index”: 0,
+“correct_value”: “42.5”,
+“tolerance”: 0.01,
+“marks”: 1,
+“explanation”: “1-3 sentence solution.”
 }
-Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has correct_value and tolerance.`;
-            const genUserContent = [
-              ...fileBlocks,
-              { type: "text", text: `Exam spec:\n${JSON.stringify(info, null, 2)}\n\nGenerate ${cappedNumQ} questions now.` }
-            ];
-            const gen = await callClaude({
-              system: genSystem,
-              messages: [{ role: "user", content: genUserContent }],
-              max_tokens: 8000,
-            });
-            const genText = collectText(gen);
-            let qData;
-            try { qData = extractJSON(genText); }
-            catch { throw new Error("Could not parse questions: " + genText.slice(0, 250)); }
-            const qs = (qData.questions || []).filter(q =>
-              q && q.text &&
-              ((q.type === "mcq" && Array.isArray(q.options) && q.options.length === 4 && typeof q.correct_index === "number") ||
-               (q.type === "numeric" && q.correct_value != null))
-            );
-            if (qs.length === 0) throw new Error("No valid questions were generated.");
-            log(`Generated ${qs.length} questions.`);
-            setExamInfo(info); setQuestions(qs); setTimeLeft(info.duration_minutes * 60);
-            setScreen("ready");
-          } catch (e) {
-            console.error(e);
-            if (e.message === "NO_API_KEY") {
-              setScreen("upload");
-              setShowKeyModal(true);
-            } else {
-              setError(e.message || "Something went wrong.");
-              setScreen("upload");
-            }
+]
+}
+Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has correct_value and tolerance.`; const genUserContent = [ ...fileBlocks, { type: "text", text: `Exam spec:\n${JSON.stringify(info, null, 2)}\n\nGenerate ${cappedNumQ} questions now.` } ]; const gen = await callClaude({ system: genSystem, messages: [{ role: "user", content: genUserContent }], max_tokens: 8000, }); const genText = collectText(gen); let qData; try { qData = extractJSON(genText); } catch { throw new Error("Could not parse questions: " + genText.slice(0, 250)); } const qs = (qData.questions || []).filter(q => q && q.text && ((q.type === "mcq" && Array.isArray(q.options) && q.options.length === 4 && typeof q.correct_index === "number") || (q.type === "numeric" && q.correct_value != null)) ); if (qs.length === 0) throw new Error("No valid questions were generated."); log(`Generated ${qs.length} questions.`);
+setExamInfo(info); setQuestions(qs); setTimeLeft(info.duration_minutes * 60);
+setScreen(“ready”);
+} catch (e) {
+console.error(e);
+if (e.message === “NO_API_KEY”) {
+setScreen(“upload”);
+setShowKeyModal(true);
+} else {
+setError(e.message || “Something went wrong.”);
+setScreen(“upload”);
+}
+}
+};
+
+```
+    const startExam = () => {
+      setExamStarted(true); setCurrentQ(0); setAnswers({}); setMarked({}); setScreen("exam");
+    };
+
+    const handleSubmit = useCallback((auto = false) => {
+      clearInterval(timerRef.current); setExamStarted(false);
+      let total = 0, max = 0, correctCount = 0;
+      const perQ = [];
+      questions.forEach((q, i) => {
+        const ans = answers[i];
+        const m = q.marks || 1; max += m;
+        let isCorrect = false;
+        if (ans != null && ans !== "") {
+          if (q.type === "mcq") isCorrect = Number(ans) === Number(q.correct_index);
+          else if (q.type === "numeric") {
+            const u = parseFloat(String(ans).trim());
+            const c = parseFloat(String(q.correct_value).trim());
+            const tol = q.tolerance || 0.01;
+            if (!isNaN(u) && !isNaN(c) && Math.abs(u - c) <= tol) isCorrect = true;
           }
-        };
+        }
+        if (isCorrect) { total += m; correctCount += 1; }
+        else if (ans != null && ans !== "" && examInfo?.negative_marking) {
+          total -= examInfo.negative_marking;
+        }
+        perQ.push({ ...q, userAnswer: ans, isCorrect });
+      });
+      const percentage = max > 0 ? Math.max(0, (total / max) * 100) : 0;
+      const examType = examInfo?.exam_short || examInfo?.exam_name || "generic";
+      const history = saveScore(examType, percentage);
+      const percentile = computePercentile(history.slice(0, -1), percentage);
+      const m = examInfo?.medals || { gold_pct: 90, silver_pct: 75, bronze_pct: 60 };
+      let medal = null;
+      if (percentage >= m.gold_pct) medal = "gold";
+      else if (percentage >= m.silver_pct) medal = "silver";
+      else if (percentage >= m.bronze_pct) medal = "bronze";
+      setScoreData({ total, max, percentage, correctCount, perQ, percentile, historyCount: history.length, medal, autoSubmitted: auto });
+      setScreen("results");
+    }, [questions, answers, examInfo]);
 
-        const startExam = () => {
-          setExamStarted(true); setCurrentQ(0); setAnswers({}); setMarked({}); setScreen("exam");
-        };
+    const reset = () => {
+      setScreen("upload"); setFiles([]); setTestName(""); setExamInfo(null);
+      setQuestions([]); setAnswers({}); setMarked({}); setCurrentQ(0);
+      setTimeLeft(0); setExamStarted(false); setAnalysisLog([]); setScoreData(null); setError(null);
+    };
 
-        const handleSubmit = useCallback((auto = false) => {
-          clearInterval(timerRef.current); setExamStarted(false);
-          let total = 0, max = 0, correctCount = 0;
-          const perQ = [];
-          questions.forEach((q, i) => {
-            const ans = answers[i];
-            const m = q.marks || 1; max += m;
-            let isCorrect = false;
-            if (ans != null && ans !== "") {
-              if (q.type === "mcq") isCorrect = Number(ans) === Number(q.correct_index);
-              else if (q.type === "numeric") {
-                const u = parseFloat(String(ans).trim());
-                const c = parseFloat(String(q.correct_value).trim());
-                const tol = q.tolerance || 0.01;
-                if (!isNaN(u) && !isNaN(c) && Math.abs(u - c) <= tol) isCorrect = true;
-              }
-            }
-            if (isCorrect) { total += m; correctCount += 1; }
-            else if (ans != null && ans !== "" && examInfo?.negative_marking) {
-              total -= examInfo.negative_marking;
-            }
-            perQ.push({ ...q, userAnswer: ans, isCorrect });
-          });
-          const percentage = max > 0 ? Math.max(0, (total / max) * 100) : 0;
-          const examType = examInfo?.exam_short || examInfo?.exam_name || "generic";
-          const history = saveScore(examType, percentage);
-          const percentile = computePercentile(history.slice(0, -1), percentage);
-          const m = examInfo?.medals || { gold_pct: 90, silver_pct: 75, bronze_pct: 60 };
-          let medal = null;
-          if (percentage >= m.gold_pct) medal = "gold";
-          else if (percentage >= m.silver_pct) medal = "silver";
-          else if (percentage >= m.bronze_pct) medal = "bronze";
-          setScoreData({ total, max, percentage, correctCount, perQ, percentile, historyCount: history.length, medal, autoSubmitted: auto });
-          setScreen("results");
-        }, [questions, answers, examInfo]);
+    return (
+      <div className="relative min-h-screen w-full overflow-x-hidden"
+        style={{ background: "radial-gradient(ellipse at top, #f5efe4 0%, #efe7d8 40%, #e8dfcc 100%)",
+                 color: "#1a1612", fontFamily: "'Newsreader', Georgia, serif" }}>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=DM+Sans:opsz,wght@9..40,300..700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+          .font-display { font-family: 'Newsreader', Georgia, serif; font-optical-sizing: auto; }
+          .font-body { font-family: 'DM Sans', system-ui, sans-serif; font-optical-sizing: auto; }
+          .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+          .ink { color: #1a1612; } .ink-mute { color: #6b5d4a; } .accent { color: #7c2d29; }
+          .bg-paper { background: linear-gradient(180deg, #fbf6ec 0%, #f7f0e1 100%); }
+          .border-ink { border-color: #1a1612; }
+          .hairline { border-top: 1px solid #1a161220; }
+          @keyframes fadeUp { from { opacity:0; transform: translateY(10px) } to { opacity:1; transform:translateY(0) } }
+          .fade-up { animation: fadeUp 0.5s ease-out both; }
+          .fade-up-1 { animation-delay: 0.05s; } .fade-up-2 { animation-delay: 0.15s; } .fade-up-3 { animation-delay: 0.25s; }
+          @keyframes pulseDot { 0%,100% { opacity:0.4 } 50% { opacity:1 } }
+          .pulse-dot { animation: pulseDot 1.4s ease-in-out infinite; }
+          .pulse-dot-2 { animation-delay: 0.2s; } .pulse-dot-3 { animation-delay: 0.4s; }
+          .btn-primary { background: #1a1612; color: #fbf6ec; transition: all 0.15s ease; }
+          .btn-primary:hover:not(:disabled) { background: #7c2d29; transform: translateY(-1px); }
+          .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+          .btn-ghost { border: 1px solid #1a161240; transition: all 0.2s ease; }
+          .btn-ghost:hover { border-color: #1a1612; background: #1a161208; }
+          .chip { background: #1a161208; border: 1px solid #1a161220; }
+        `}</style>
+        <PaperGrain />
 
-        const reset = () => {
-          setScreen("upload"); setFiles([]); setTestName(""); setExamInfo(null);
-          setQuestions([]); setAnswers({}); setMarked({}); setCurrentQ(0);
-          setTimeLeft(0); setExamStarted(false); setAnalysisLog([]); setScoreData(null); setError(null);
-        };
+        <header className="relative z-10 mx-auto max-w-6xl px-5 pt-8 pb-4 sm:px-8">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-ink border bg-paper">
+                <Icon name="book-open" className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-display text-2xl leading-none tracking-tight">Atrium</div>
+                <div className="font-body text-[11px] uppercase tracking-[0.18em] ink-mute truncate">Practice Examinations · Self-Paced</div>
+              </div>
+            </div>
+            {screen !== "exam" && (
+              <div className="flex items-center gap-1 sm:gap-3 shrink-0">
+                <button
+                  onClick={() => setShowKeyModal(true)}
+                  className="font-body text-sm ink-mute hover:ink flex items-center gap-1.5 rounded-full px-2 sm:px-3 py-1.5"
+                  title="Manage API key"
+                >
+                  <Icon name="key" className="h-4 w-4" />
+                  <span className="hidden sm:inline">API Key</span>
+                </button>
+                {screen !== "upload" && (
+                  <button className="font-body text-sm ink-mute hover:ink flex items-center gap-1" onClick={reset}>
+                    <Icon name="x" className="h-4 w-4" /> <span className="hidden sm:inline">New Session</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="hairline mt-6" />
+        </header>
 
-        return (
-          <div className="relative min-h-screen w-full overflow-x-hidden"
-            style={{ background: "radial-gradient(ellipse at top, #f5efe4 0%, #efe7d8 40%, #e8dfcc 100%)",
-                     color: "#1a1612", fontFamily: "'Newsreader', Georgia, serif" }}>
-            <style>{`
-              @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=DM+Sans:opsz,wght@9..40,300..700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-              .font-display { font-family: 'Newsreader', Georgia, serif; font-optical-sizing: auto; }
-              .font-body { font-family: 'DM Sans', system-ui, sans-serif; font-optical-sizing: auto; }
-              .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
-              .ink { color: #1a1612; } .ink-mute { color: #6b5d4a; } .accent { color: #7c2d29; }
-              .bg-paper { background: linear-gradient(180deg, #fbf6ec 0%, #f7f0e1 100%); }
-              .border-ink { border-color: #1a1612; }
-              .hairline { border-top: 1px solid #1a161220; }
-              @keyframes fadeUp { from { opacity:0; transform: translateY(10px) } to { opacity:1; transform:translateY(0) } }
-              .fade-up { animation: fadeUp 0.5s ease-out both; }
-              .fade-up-1 { animation-delay: 0.05s; } .fade-up-2 { animation-delay: 0.15s; } .fade-up-3 { animation-delay: 0.25s; }
-              @keyframes pulseDot { 0%,100% { opacity:0.4 } 50% { opacity:1 } }
-              .pulse-dot { animation: pulseDot 1.4s ease-in-out infinite; }
-              .pulse-dot-2 { animation-delay: 0.2s; } .pulse-dot-3 { animation-delay: 0.4s; }
-              .btn-primary { background: #1a1612; color: #fbf6ec; transition: all 0.15s ease; }
-              .btn-primary:hover:not(:disabled) { background: #7c2d29; transform: translateY(-1px); }
-              .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-              .btn-ghost { border: 1px solid #1a161240; transition: all 0.2s ease; }
-              .btn-ghost:hover { border-color: #1a1612; background: #1a161208; }
-              .chip { background: #1a161208; border: 1px solid #1a161220; }
-            `}</style>
-            <PaperGrain />
+        <main className="relative z-10 mx-auto max-w-6xl px-5 pb-24 sm:px-8">
+          {screen === "upload" && (
+            <UploadView {...{ files, onFiles, removeFile, testName, setTestName, analyze: analyzeExam, error, dragRef, onDrop, onDragOver, onDragLeave }} />
+          )}
+          {screen === "analyzing" && <AnalyzingView log={analysisLog} />}
+          {screen === "ready" && <ReadyView examInfo={examInfo} numQ={questions.length} startExam={startExam} />}
+          {screen === "exam" && (
+            <ExamView {...{ examInfo, questions, answers, setAnswers, marked, setMarked, currentQ, setCurrentQ, timeLeft, onFinish: () => setShowFinishConfirm(true) }} />
+          )}
+          {screen === "results" && scoreData && <ResultsView data={scoreData} examInfo={examInfo} onRestart={reset} />}
+        </main>
 
-            <header className="relative z-10 mx-auto max-w-6xl px-5 pt-8 pb-4 sm:px-8">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-ink border bg-paper">
-                    <Icon name="book-open" className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-display text-2xl leading-none tracking-tight">Atrium</div>
-                    <div className="font-body text-[11px] uppercase tracking-[0.18em] ink-mute truncate">Practice Examinations · Self-Paced</div>
-                  </div>
-                </div>
-                {screen !== "exam" && (
-                  <div className="flex items-center gap-1 sm:gap-3 shrink-0">
-                    <button
-                      onClick={() => setShowKeyModal(true)}
-                      className="font-body text-sm ink-mute hover:ink flex items-center gap-1.5 rounded-full px-2 sm:px-3 py-1.5"
-                      title="Manage API key"
-                    >
-                      <Icon name="key" className="h-4 w-4" />
-                      <span className="hidden sm:inline">API Key</span>
+        {showFinishConfirm && (
+          <ConfirmModal
+            title="Submit your exam?"
+            body={`You have answered ${Object.keys(answers).length} of ${questions.length} questions. Once submitted, you cannot return to the paper.`}
+            onCancel={() => setShowFinishConfirm(false)}
+            onConfirm={() => { setShowFinishConfirm(false); handleSubmit(false); }}
+          />
+        )}
+        {showKeyModal && (
+          <KeyModal onClose={() => setShowKeyModal(false)} />
+        )}
+      </div>
+    );
+  }
+
+  function UploadView({ files, onFiles, removeFile, testName, setTestName, analyze, error, dragRef, onDrop, onDragOver, onDragLeave }) {
+    const fileInputRef = useRef(null);
+    return (
+      <div className="grid gap-10 pt-8 lg:grid-cols-12">
+        <section className="lg:col-span-7 fade-up">
+          <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-4">◆ Volume I · Issue Nº 1</div>
+          <h1 className="font-display text-5xl leading-[1.05] tracking-tight sm:text-6xl">
+            Sit a real exam,<br /><em className="italic accent">on your terms.</em>
+          </h1>
+          <p className="font-body ink-mute mt-6 max-w-xl text-base leading-relaxed">
+            Upload one or more sample papers. We identify the exam, look up its official standards, generate a fresh paper at matched difficulty, and predict where you would land on the real thing.
+          </p>
+          <div className="hairline mt-8" />
+          <ul className="font-body mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            <li className="flex items-center gap-2"><Icon name="search" className="h-4 w-4 accent" /> Auto-identifies the exam</li>
+            <li className="flex items-center gap-2"><Icon name="globe" className="h-4 w-4 accent" /> Confirms standards on the web</li>
+            <li className="flex items-center gap-2"><Icon name="clock" className="h-4 w-4 accent" /> Sets official duration</li>
+            <li className="flex items-center gap-2"><Icon name="trophy" className="h-4 w-4 accent" /> Predicts percentile & medals</li>
+          </ul>
+        </section>
+
+        <section className="lg:col-span-5 fade-up fade-up-2">
+          <div className="bg-paper rounded-2xl border-ink border p-6 sm:p-7">
+            <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-4">01 · Begin your session</div>
+            <label className="font-body block text-xs uppercase tracking-[0.18em] ink-mute mb-2">
+              Test name <span className="lowercase tracking-normal">(optional)</span>
+            </label>
+            <input
+              type="text" value={testName} onChange={(e) => setTestName(e.target.value)}
+              placeholder="e.g. JEE Main, AMC 10, SAT Math…"
+              className="font-display w-full bg-transparent text-xl outline-none border-b pb-2"
+              style={{ borderColor: "#1a161250" }}
+            />
+            <div className="font-body mt-7 mb-2 block text-xs uppercase tracking-[0.18em] ink-mute">Sample paper(s)</div>
+            <div ref={dragRef} onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}
+                 onClick={() => fileInputRef.current?.click()}
+                 className="cursor-pointer rounded-xl border border-dashed p-6 text-center transition-all hover:bg-[#1a161208]"
+                 style={{ borderColor: "#1a161270" }}>
+              <input ref={fileInputRef} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md"
+                     className="hidden" onChange={(e) => onFiles(e.target.files)} />
+              <Icon name="upload" className="mx-auto h-6 w-6 ink-mute" />
+              <div className="font-display mt-3 text-lg">Drop files here</div>
+              <div className="font-body ink-mute mt-1 text-xs">PDF · images · text · up to 30 MB each</div>
+            </div>
+
+            {files.length > 0 && (
+              <ul className="mt-4 space-y-2">
+                {files.map((f, i) => (
+                  <li key={i} className="flex items-center justify-between gap-3 rounded-lg chip px-3 py-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Icon name="file-text" className="h-4 w-4 shrink-0 ink-mute" />
+                      <span className="font-body truncate text-sm">{f.name}</span>
+                      <span className="font-mono ink-mute shrink-0 text-[11px]">{(f.size / 1024).toFixed(0)} KB</span>
+                    </div>
+                    <button onClick={(e) => { e.stopPropagation(); removeFile(i); }} className="ink-mute hover:accent" aria-label="Remove file">
+                      <Icon name="trash-2" className="h-4 w-4" />
                     </button>
-                    {screen !== "upload" && (
-                      <button className="font-body text-sm ink-mute hover:ink flex items-center gap-1" onClick={reset}>
-                        <Icon name="x" className="h-4 w-4" /> <span className="hidden sm:inline">New Session</span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="hairline mt-6" />
-            </header>
-
-            <main className="relative z-10 mx-auto max-w-6xl px-5 pb-24 sm:px-8">
-              {screen === "upload" && (
-                <UploadView {...{ files, onFiles, removeFile, testName, setTestName, analyze: analyzeExam, error, dragRef, onDrop, onDragOver, onDragLeave }} />
-              )}
-              {screen === "analyzing" && <AnalyzingView log={analysisLog} />}
-              {screen === "ready" && <ReadyView examInfo={examInfo} numQ={questions.length} startExam={startExam} />}
-              {screen === "exam" && (
-                <ExamView {...{ examInfo, questions, answers, setAnswers, marked, setMarked, currentQ, setCurrentQ, timeLeft, onFinish: () => setShowFinishConfirm(true) }} />
-              )}
-              {screen === "results" && scoreData && <ResultsView data={scoreData} examInfo={examInfo} onRestart={reset} />}
-            </main>
-
-            {showFinishConfirm && (
-              <ConfirmModal
-                title="Submit your exam?"
-                body={`You have answered ${Object.keys(answers).length} of ${questions.length} questions. Once submitted, you cannot return to the paper.`}
-                onCancel={() => setShowFinishConfirm(false)}
-                onConfirm={() => { setShowFinishConfirm(false); handleSubmit(false); }}
-              />
-            )}
-            {showKeyModal && (
-              <KeyModal onClose={() => setShowKeyModal(false)} />
-            )}
-          </div>
-        );
-      }
-
-      function UploadView({ files, onFiles, removeFile, testName, setTestName, analyze, error, dragRef, onDrop, onDragOver, onDragLeave }) {
-        const fileInputRef = useRef(null);
-        return (
-          <div className="grid gap-10 pt-8 lg:grid-cols-12">
-            <section className="lg:col-span-7 fade-up">
-              <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-4">◆ Volume I · Issue Nº 1</div>
-              <h1 className="font-display text-5xl leading-[1.05] tracking-tight sm:text-6xl">
-                Sit a real exam,<br /><em className="italic accent">on your terms.</em>
-              </h1>
-              <p className="font-body ink-mute mt-6 max-w-xl text-base leading-relaxed">
-                Upload one or more sample papers. We identify the exam, look up its official standards, generate a fresh paper at matched difficulty, and predict where you would land on the real thing.
-              </p>
-              <div className="hairline mt-8" />
-              <ul className="font-body mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <li className="flex items-center gap-2"><Icon name="search" className="h-4 w-4 accent" /> Auto-identifies the exam</li>
-                <li className="flex items-center gap-2"><Icon name="globe" className="h-4 w-4 accent" /> Confirms standards on the web</li>
-                <li className="flex items-center gap-2"><Icon name="clock" className="h-4 w-4 accent" /> Sets official duration</li>
-                <li className="flex items-center gap-2"><Icon name="trophy" className="h-4 w-4 accent" /> Predicts percentile & medals</li>
+                  </li>
+                ))}
               </ul>
-            </section>
+            )}
 
-            <section className="lg:col-span-5 fade-up fade-up-2">
-              <div className="bg-paper rounded-2xl border-ink border p-6 sm:p-7">
-                <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-4">01 · Begin your session</div>
-                <label className="font-body block text-xs uppercase tracking-[0.18em] ink-mute mb-2">
-                  Test name <span className="lowercase tracking-normal">(optional)</span>
-                </label>
-                <input
-                  type="text" value={testName} onChange={(e) => setTestName(e.target.value)}
-                  placeholder="e.g. JEE Main, AMC 10, SAT Math…"
-                  className="font-display w-full bg-transparent text-xl outline-none border-b pb-2"
-                  style={{ borderColor: "#1a161250" }}
-                />
-                <div className="font-body mt-7 mb-2 block text-xs uppercase tracking-[0.18em] ink-mute">Sample paper(s)</div>
-                <div ref={dragRef} onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}
-                     onClick={() => fileInputRef.current?.click()}
-                     className="cursor-pointer rounded-xl border border-dashed p-6 text-center transition-all hover:bg-[#1a161208]"
-                     style={{ borderColor: "#1a161270" }}>
-                  <input ref={fileInputRef} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md"
-                         className="hidden" onChange={(e) => onFiles(e.target.files)} />
-                  <Icon name="upload" className="mx-auto h-6 w-6 ink-mute" />
-                  <div className="font-display mt-3 text-lg">Drop files here</div>
-                  <div className="font-body ink-mute mt-1 text-xs">PDF · images · text · up to 30 MB each</div>
-                </div>
-
-                {files.length > 0 && (
-                  <ul className="mt-4 space-y-2">
-                    {files.map((f, i) => (
-                      <li key={i} className="flex items-center justify-between gap-3 rounded-lg chip px-3 py-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <Icon name="file-text" className="h-4 w-4 shrink-0 ink-mute" />
-                          <span className="font-body truncate text-sm">{f.name}</span>
-                          <span className="font-mono ink-mute shrink-0 text-[11px]">{(f.size / 1024).toFixed(0)} KB</span>
-                        </div>
-                        <button onClick={(e) => { e.stopPropagation(); removeFile(i); }} className="ink-mute hover:accent" aria-label="Remove file">
-                          <Icon name="trash-2" className="h-4 w-4" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {error && (
-                  <div className="font-body mt-4 flex items-start gap-2 rounded-lg border p-3 text-sm accent" style={{ background: "#fee2e266", borderColor: "#7c2d2940" }}>
-                    <Icon name="alert-circle" className="h-4 w-4 shrink-0 mt-0.5" />
-                    <div>{error}</div>
-                  </div>
-                )}
-
-                <button onClick={analyze} disabled={files.length === 0}
-                        className="font-body btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium uppercase tracking-[0.18em]">
-                  <Icon name="sparkles" className="h-4 w-4" /> Analyse & Build Paper
-                </button>
-                <p className="font-body ink-mute mt-3 text-center text-[11px]">
-                  Your scores stay anonymous and contribute to percentile predictions.
-                </p>
-              </div>
-            </section>
-          </div>
-        );
-      }
-
-      function AnalyzingView({ log }) {
-        return (
-          <div className="grid place-items-center pt-16">
-            <div className="text-center fade-up">
-              <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3">02 · In session</div>
-              <div className="font-display text-4xl sm:text-5xl tracking-tight">
-                Studying your paper
-                <span className="inline-flex ml-1">
-                  <span className="pulse-dot">.</span>
-                  <span className="pulse-dot pulse-dot-2">.</span>
-                  <span className="pulse-dot pulse-dot-3">.</span>
-                </span>
-              </div>
-              <p className="font-body ink-mute mt-4 max-w-md mx-auto">
-                Identifying the exam, confirming its standard format on the web, and composing original questions at matched difficulty.
-              </p>
-            </div>
-            <div className="mt-12 w-full max-w-xl fade-up fade-up-2">
-              <div className="bg-paper rounded-2xl border-ink border p-5 sm:p-6">
-                <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3 flex items-center gap-2">
-                  <Icon name="loader" className="h-3 w-3 animate-spin" /> Live progress
-                </div>
-                <ul className="font-mono space-y-2 text-sm">
-                  {log.map((l, i) => (
-                    <li key={i} className="flex gap-3">
-                      <span className="ink-mute shrink-0">{String(i + 1).padStart(2, "0")}</span>
-                      <span>{l}</span>
-                    </li>
-                  ))}
-                  {log.length === 0 && <li className="ink-mute text-sm font-body">Waking up the analyst…</li>}
-                </ul>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      function ReadyView({ examInfo, numQ, startExam }) {
-        if (!examInfo) return null;
-        const Stat = ({ label, value }) => (
-          <div>
-            <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mb-1.5">{label}</div>
-            <div className="font-display text-2xl leading-none capitalize">{value}</div>
-          </div>
-        );
-        const MedalCard = ({ tier, label, threshold }) => {
-          const colors = { gold: "#b9892e", silver: "#8a8a8a", bronze: "#a0633a" };
-          return (
-            <div className="rounded-xl p-3 text-center" style={{ border: "1px solid #1a161225", background: "#ffffff30" }}>
-              <Icon name="medal" className="mx-auto h-5 w-5" style={{ color: colors[tier] }} />
-              <div className="font-display text-base mt-1.5">{label}</div>
-              <div className="font-mono text-[11px] ink-mute">≥ {threshold ?? "?"}%</div>
-            </div>
-          );
-        };
-        return (
-          <div className="grid gap-8 pt-6 lg:grid-cols-12">
-            <section className="lg:col-span-7 fade-up">
-              <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3">03 · Brief from the registrar</div>
-              <h2 className="font-display text-4xl tracking-tight sm:text-5xl">{examInfo.exam_name}</h2>
-              <p className="font-body ink-mute mt-4 max-w-2xl text-base leading-relaxed">{examInfo.rationale}</p>
-              <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
-                <Stat label="Duration" value={`${examInfo.duration_minutes} min`} />
-                <Stat label="Questions" value={`${numQ}`} />
-                <Stat label="Format" value={examInfo.question_format} />
-                <Stat label="Difficulty" value={examInfo.difficulty} />
-              </dl>
-              <div className="hairline mt-10" />
-              <div className="mt-6 grid gap-6 sm:grid-cols-2">
-                <div>
-                  <div className="font-body text-[11px] uppercase tracking-[0.18em] ink-mute mb-2">Marking</div>
-                  <div className="font-body text-sm">{examInfo.marking_scheme}</div>
-                  {examInfo.negative_marking ? (
-                    <div className="font-mono mt-2 text-xs accent">Negative: −{examInfo.negative_marking} per wrong answer</div>
-                  ) : null}
-                </div>
-                <div>
-                  <div className="font-body text-[11px] uppercase tracking-[0.18em] ink-mute mb-2">Subjects</div>
-                  <div className="flex flex-wrap gap-2">
-                    {(examInfo.subjects || []).map((s, i) => (
-                      <span key={i} className="font-body chip rounded-full px-3 py-1 text-xs">{s}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <aside className="lg:col-span-5 fade-up fade-up-2">
-              <div className="bg-paper rounded-2xl border-ink border p-7">
-                <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3">✶ Examination room</div>
-                <p className="font-display text-2xl leading-tight">When you press <em className="italic">Begin</em>, the clock starts.</p>
-                <ul className="font-body ink-mute mt-5 space-y-2 text-sm">
-                  <li>· No pause once the timer is running.</li>
-                  <li>· Answers auto-save as you go.</li>
-                  <li>· Time-up triggers automatic submission.</li>
-                  <li>· Your result is benchmarked against past attempts.</li>
-                </ul>
-                <button onClick={startExam} className="font-body btn-primary mt-7 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium uppercase tracking-[0.18em]">
-                  <Icon name="play" className="h-4 w-4" /> Begin Examination
-                </button>
-                <div className="hairline mt-6" />
-                <div className="mt-5">
-                  <div className="font-body text-[11px] uppercase tracking-[0.18em] ink-mute mb-3">Medal thresholds</div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <MedalCard tier="gold" label="Gold" threshold={examInfo.medals?.gold_pct} />
-                    <MedalCard tier="silver" label="Silver" threshold={examInfo.medals?.silver_pct} />
-                    <MedalCard tier="bronze" label="Bronze" threshold={examInfo.medals?.bronze_pct} />
-                  </div>
-                </div>
-              </div>
-            </aside>
-          </div>
-        );
-      }
-
-      function ExamView({ examInfo, questions, answers, setAnswers, marked, setMarked, currentQ, setCurrentQ, timeLeft, onFinish }) {
-        const q = questions[currentQ];
-        const totalTime = (examInfo?.duration_minutes || 1) * 60;
-        const timePct = Math.max(0, Math.min(100, (timeLeft / totalTime) * 100));
-        const lowTime = timeLeft <= 60;
-        const setAnswer = (val) => setAnswers({ ...answers, [currentQ]: val });
-        const toggleMark = () => setMarked({ ...marked, [currentQ]: !marked[currentQ] });
-        const goPrev = () => setCurrentQ(Math.max(0, currentQ - 1));
-        const goNext = () => setCurrentQ(Math.min(questions.length - 1, currentQ + 1));
-        const answeredCount = Object.keys(answers).filter(k => answers[k] != null && answers[k] !== "").length;
-
-        return (
-          <div className="grid gap-6 pt-2 lg:grid-cols-12">
-            <div className="lg:col-span-12 fade-up">
-              <div className="bg-paper rounded-2xl border-ink border px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="font-display text-lg leading-none">{examInfo?.exam_name}</div>
-                  <div className="font-body chip rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] ink-mute">{examInfo?.question_format}</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="font-mono inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm tabular-nums"
-                       style={{ background: lowTime ? "#fee2e2" : "#ffffff66", color: lowTime ? "#7c2d29" : "#1a1612", border: lowTime ? "1px solid #7c2d29" : "1px solid #1a161230" }}>
-                    <Icon name="clock" className="h-4 w-4" /> {formatTime(timeLeft)}
-                  </div>
-                  <button onClick={onFinish} className="font-body btn-primary inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium uppercase tracking-[0.18em]">
-                    <Icon name="flag" className="h-3.5 w-3.5" /> Finish
-                  </button>
-                </div>
-              </div>
-              <div className="mt-2 h-[2px] w-full overflow-hidden rounded-full" style={{ background: "#1a161215" }}>
-                <div className="h-full transition-all duration-1000" style={{ width: `${timePct}%`, backgroundColor: lowTime ? "#7c2d29" : "#1a1612" }} />
-              </div>
-            </div>
-
-            <section className="lg:col-span-8 fade-up fade-up-1">
-              <div className="bg-paper rounded-2xl border-ink border p-6 sm:p-8">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute">
-                      Question {currentQ + 1} of {questions.length}{q?.subject ? ` · ${q.subject}` : ""}
-                    </div>
-                    <div className="font-mono mt-1 text-[11px] ink-mute">
-                      {q?.type === "mcq" ? "Multiple choice" : "Numeric"} · {q?.marks ?? 1} mark{(q?.marks ?? 1) > 1 ? "s" : ""}
-                    </div>
-                  </div>
-                  <button onClick={toggleMark}
-                          className="font-body inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.16em] transition-all"
-                          style={marked[currentQ] ? { background: "#7c2d29", color: "white" } : { border: "1px solid #1a161240" }}>
-                    <Icon name="flag" className="h-3 w-3" /> {marked[currentQ] ? "Marked" : "Mark for review"}
-                  </button>
-                </div>
-                <div className="hairline my-5" />
-                <MathText className="font-display text-xl sm:text-[22px] leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>{q?.text}</MathText>
-
-                {q?.type === "mcq" && (
-                  <div className="mt-7 space-y-3">
-                    {q.options.map((opt, i) => {
-                      const selected = answers[currentQ] === i;
-                      const letter = String.fromCharCode(65 + i);
-                      return (
-                        <button key={i} onClick={() => setAnswer(i)}
-                                className="w-full text-left rounded-xl border px-4 py-3.5 transition-all"
-                                style={{ borderColor: selected ? "#1a1612" : "#1a161230", background: selected ? "#1a161208" : "transparent" }}>
-                          <div className="flex items-start gap-3">
-                            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full font-mono text-sm"
-                                 style={selected ? { background: "#1a1612", color: "#fbf6ec" } : { border: "1px solid #1a161240" }}>
-                              {letter}
-                            </div>
-                            <MathText className="font-body text-base leading-relaxed">{opt}</MathText>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {q?.type === "numeric" && (
-                  <div className="mt-7">
-                    <label className="font-body block text-[11px] uppercase tracking-[0.18em] ink-mute mb-2">Your numeric answer</label>
-                    <input type="text" inputMode="decimal" value={answers[currentQ] ?? ""}
-                           onChange={(e) => setAnswer(e.target.value)} placeholder="e.g. 42 or 3.14"
-                           className="font-mono w-full max-w-sm rounded-xl px-4 py-3 text-lg outline-none"
-                           style={{ border: "1px solid #1a161240", background: "#ffffff80" }} />
-                  </div>
-                )}
-
-                <div className="mt-8 flex items-center justify-between">
-                  <button onClick={goPrev} disabled={currentQ === 0}
-                          className="font-body btn-ghost inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm disabled:opacity-30">
-                    <Icon name="chevron-left" className="h-4 w-4" /> Previous
-                  </button>
-                  <button onClick={() => setAnswer(undefined)} className="font-body ink-mute hover:ink text-xs uppercase tracking-[0.18em]">
-                    Clear answer
-                  </button>
-                  <button onClick={goNext} disabled={currentQ === questions.length - 1}
-                          className="font-body btn-ghost inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm disabled:opacity-30">
-                    Next <Icon name="chevron-right" className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            <aside className="lg:col-span-4 fade-up fade-up-2">
-              <div className="bg-paper rounded-2xl border-ink border p-5 sm:p-6 lg:sticky lg:top-4">
-                <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-4">Question palette</div>
-                <div className="grid grid-cols-6 gap-2 sm:grid-cols-8 lg:grid-cols-6">
-                  {questions.map((_, i) => {
-                    const isCurr = i === currentQ;
-                    const isAns = answers[i] != null && answers[i] !== "";
-                    const isMark = marked[i];
-                    return (
-                      <button key={i} onClick={() => setCurrentQ(i)}
-                              className="relative grid aspect-square place-items-center rounded-lg font-mono text-sm transition-all"
-                              style={{
-                                background: isCurr ? "#1a1612" : isAns ? "#1a161215" : "transparent",
-                                color: isCurr ? "#fbf6ec" : "#1a1612",
-                                border: isCurr ? "1px solid #1a1612" : isAns ? "1px solid #1a161240" : "1px solid #1a161220",
-                              }}>
-                        {i + 1}
-                        {isMark && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full" style={{ background: "#7c2d29" }} />}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="hairline my-4" />
-                <ul className="font-body space-y-1.5 text-xs">
-                  <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm" style={{ background: "#1a1612" }} />Current</li>
-                  <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm" style={{ background: "#1a161215", border: "1px solid #1a161240" }} />Answered ({answeredCount})</li>
-                  <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm" style={{ border: "1px solid #1a161220" }} />Unanswered</li>
-                  <li className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#7c2d29" }} />Marked for review</li>
-                </ul>
-              </div>
-            </aside>
-          </div>
-        );
-      }
-
-      function ResultsView({ data, examInfo, onRestart }) {
-        const { total, max, percentage, correctCount, perQ, percentile, historyCount, medal, autoSubmitted } = data;
-        const medalColors = { gold: "#b9892e", silver: "#8a8a8a", bronze: "#a0633a" };
-        return (
-          <div className="pt-4">
-            <section className="grid gap-8 lg:grid-cols-12 fade-up">
-              <div className="lg:col-span-7">
-                <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3">04 · Final report</div>
-                <h2 className="font-display text-5xl sm:text-6xl tracking-tight">
-                  {percentage >= 90 ? "Magnificent." : percentage >= 75 ? "Strong showing." : percentage >= 50 ? "A solid effort." : "Room to grow."}
-                </h2>
-                {autoSubmitted && <div className="font-body mt-2 text-xs uppercase tracking-[0.18em] accent">· time elapsed — submitted automatically</div>}
-                <p className="font-body ink-mute mt-4 max-w-xl">
-                  {examInfo?.exam_name} · {correctCount} of {perQ.length} correct · scored {total.toFixed(1)} of {max}
-                </p>
-              </div>
-              <div className="lg:col-span-5">
-                <div className="bg-paper rounded-2xl border-ink border p-7 grid grid-cols-3 gap-5">
-                  <div className="col-span-3 sm:col-span-1 text-center">
-                    <div className="font-display text-6xl leading-none">
-                      {percentage.toFixed(0)}<span className="font-body text-2xl ink-mute">%</span>
-                    </div>
-                    <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-2">Overall score</div>
-                  </div>
-                  <div className="col-span-3 sm:col-span-1 text-center">
-                    <div className="font-display text-6xl leading-none">
-                      {percentile != null ? percentile : "—"}
-                      {percentile != null && <span className="font-body text-2xl ink-mute">th</span>}
-                    </div>
-                    <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-2">
-                      {percentile != null ? "Predicted percentile" : "Building cohort"}
-                    </div>
-                  </div>
-                  <div className="col-span-3 sm:col-span-1 text-center">
-                    {medal ? (
-                      <>
-                        <Icon name="trophy" className="mx-auto h-12 w-12" style={{ color: medalColors[medal] }} />
-                        <div className="font-display text-2xl mt-1 capitalize">{medal}</div>
-                        <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-1">Predicted medal</div>
-                      </>
-                    ) : (
-                      <>
-                        <Icon name="award" className="mx-auto h-12 w-12 ink-mute" />
-                        <div className="font-display text-2xl mt-1">No medal</div>
-                        <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-1">Keep going</div>
-                      </>
-                    )}
-                  </div>
-                  <div className="col-span-3 hairline" />
-                  <div className="col-span-3 font-body text-xs ink-mute text-center">
-                    {historyCount > 1
-                      ? `Benchmarked against ${historyCount - 1} prior attempt${historyCount - 1 === 1 ? "" : "s"} of similar exams.`
-                      : "First attempt of this exam type — percentile will sharpen as more attempts are recorded."}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <div className="hairline my-10" />
-
-            <section className="fade-up fade-up-2">
-              <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-5">Question-by-question review</div>
-              <div className="space-y-4">
-                {perQ.map((q, i) => <ReviewItem key={i} q={q} idx={i} />)}
-              </div>
-            </section>
-
-            <div className="mt-12 flex flex-wrap items-center justify-between gap-4 fade-up fade-up-3">
-              <button onClick={() => window.print()} className="font-body btn-ghost inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm uppercase tracking-[0.18em]">
-                Print report
-              </button>
-              <button onClick={onRestart} className="font-body btn-primary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm uppercase tracking-[0.18em]">
-                New examination
-              </button>
-            </div>
-          </div>
-        );
-      }
-
-      function ReviewItem({ q, idx }) {
-        const [open, setOpen] = useState(false);
-        const wasAttempted = q.userAnswer != null && q.userAnswer !== "";
-        return (
-          <div className="bg-paper rounded-xl border p-4 sm:p-5 transition-all"
-               style={{ borderColor: q.isCorrect ? "#1f6e3540" : wasAttempted ? "#7c2d2940" : "#1a161220" }}>
-            <button onClick={() => setOpen(!open)} className="w-full text-left">
-              <div className="flex items-start gap-3">
-                {q.isCorrect ? (
-                  <Icon name="check-circle-2" className="h-5 w-5 shrink-0 mt-0.5" style={{ color: "#1f6e35" }} />
-                ) : wasAttempted ? (
-                  <Icon name="x-circle" className="h-5 w-5 shrink-0 mt-0.5 accent" />
-                ) : (
-                  <Icon name="alert-circle" className="h-5 w-5 shrink-0 mt-0.5 ink-mute" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="font-body text-[11px] uppercase tracking-[0.18em] ink-mute">
-                    Q{idx + 1} · {q.subject || "—"} · {q.isCorrect ? "Correct" : wasAttempted ? "Incorrect" : "Skipped"}
-                  </div>
-                  <div className="font-display text-base mt-1 leading-snug" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                    {(q.text || "").replace(/\$\$([^$]+)\$\$/g, "$1").replace(/\$([^$]+)\$/g, "$1")}
-                  </div>
-                </div>
-              </div>
-            </button>
-            {open && (
-              <div className="mt-4 pl-8">
-                <div className="hairline mb-4" />
-                <MathText className="font-body text-base mb-4" style={{ whiteSpace: "pre-wrap" }}>{q.text}</MathText>
-                {q.type === "mcq" && (
-                  <div className="space-y-2">
-                    {q.options.map((opt, i) => {
-                      const isCorrect = i === q.correct_index;
-                      const isUser = i === q.userAnswer;
-                      return (
-                        <div key={i} className="font-body flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
-                             style={{
-                               background: isCorrect ? "#1f6e3515" : isUser ? "#7c2d2915" : "transparent",
-                               border: `1px solid ${isCorrect ? "#1f6e3540" : isUser ? "#7c2d2940" : "#1a161215"}`,
-                             }}>
-                          <span className="font-mono text-xs ink-mute w-5">{String.fromCharCode(65 + i)}</span>
-                          <MathText as="span" className="flex-1">{opt}</MathText>
-                          {isCorrect && <span className="font-body text-[10px] uppercase tracking-[0.18em]" style={{ color: "#1f6e35" }}>Correct</span>}
-                          {isUser && !isCorrect && <span className="font-body text-[10px] uppercase tracking-[0.18em] accent">Your answer</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {q.type === "numeric" && (
-                  <div className="font-body text-sm space-y-1">
-                    <div><span className="ink-mute">Your answer: </span><span className="font-mono">{wasAttempted ? q.userAnswer : "—"}</span></div>
-                    <div><span className="ink-mute">Correct answer: </span><span className="font-mono">{q.correct_value}</span></div>
-                  </div>
-                )}
-                {q.explanation && (
-                  <div className="font-body mt-4 rounded-lg p-3 text-sm leading-relaxed" style={{ background: "#ffffff66" }}>
-                    <div className="text-[11px] uppercase tracking-[0.18em] ink-mute mb-1">Solution</div>
-                    <MathText>{q.explanation}</MathText>
-                  </div>
-                )}
+            {error && (
+              <div className="font-body mt-4 flex items-start gap-2 rounded-lg border p-3 text-sm accent" style={{ background: "#fee2e266", borderColor: "#7c2d2940" }}>
+                <Icon name="alert-circle" className="h-4 w-4 shrink-0 mt-0.5" />
+                <div>{error}</div>
               </div>
             )}
-          </div>
-        );
-      }
 
-      function ConfirmModal({ title, body, onCancel, onConfirm }) {
-        return (
-          <div className="fixed inset-0 z-50 grid place-items-center p-4" style={{ background: "rgba(0,0,0,0.4)" }} onClick={onCancel}>
-            <div onClick={(e) => e.stopPropagation()} className="bg-paper rounded-2xl border-ink border p-6 max-w-md w-full fade-up">
-              <div className="font-display text-2xl mb-2">{title}</div>
-              <p className="font-body ink-mute text-sm">{body}</p>
-              <div className="mt-6 flex justify-end gap-3">
-                <button onClick={onCancel} className="font-body btn-ghost rounded-full px-5 py-2 text-sm uppercase tracking-[0.18em]">Keep going</button>
-                <button onClick={onConfirm} className="font-body btn-primary rounded-full px-5 py-2 text-sm uppercase tracking-[0.18em]">Submit now</button>
+            <button onClick={analyze} disabled={files.length === 0}
+                    className="font-body btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium uppercase tracking-[0.18em]">
+              <Icon name="sparkles" className="h-4 w-4" /> Analyse & Build Paper
+            </button>
+            <p className="font-body ink-mute mt-3 text-center text-[11px]">
+              Your scores stay anonymous and contribute to percentile predictions.
+            </p>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  function AnalyzingView({ log }) {
+    return (
+      <div className="grid place-items-center pt-16">
+        <div className="text-center fade-up">
+          <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3">02 · In session</div>
+          <div className="font-display text-4xl sm:text-5xl tracking-tight">
+            Studying your paper
+            <span className="inline-flex ml-1">
+              <span className="pulse-dot">.</span>
+              <span className="pulse-dot pulse-dot-2">.</span>
+              <span className="pulse-dot pulse-dot-3">.</span>
+            </span>
+          </div>
+          <p className="font-body ink-mute mt-4 max-w-md mx-auto">
+            Identifying the exam, confirming its standard format on the web, and composing original questions at matched difficulty.
+          </p>
+        </div>
+        <div className="mt-12 w-full max-w-xl fade-up fade-up-2">
+          <div className="bg-paper rounded-2xl border-ink border p-5 sm:p-6">
+            <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3 flex items-center gap-2">
+              <Icon name="loader" className="h-3 w-3 animate-spin" /> Live progress
+            </div>
+            <ul className="font-mono space-y-2 text-sm">
+              {log.map((l, i) => (
+                <li key={i} className="flex gap-3">
+                  <span className="ink-mute shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                  <span>{l}</span>
+                </li>
+              ))}
+              {log.length === 0 && <li className="ink-mute text-sm font-body">Waking up the analyst…</li>}
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function ReadyView({ examInfo, numQ, startExam }) {
+    if (!examInfo) return null;
+    const Stat = ({ label, value }) => (
+      <div>
+        <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mb-1.5">{label}</div>
+        <div className="font-display text-2xl leading-none capitalize">{value}</div>
+      </div>
+    );
+    const MedalCard = ({ tier, label, threshold }) => {
+      const colors = { gold: "#b9892e", silver: "#8a8a8a", bronze: "#a0633a" };
+      return (
+        <div className="rounded-xl p-3 text-center" style={{ border: "1px solid #1a161225", background: "#ffffff30" }}>
+          <Icon name="medal" className="mx-auto h-5 w-5" style={{ color: colors[tier] }} />
+          <div className="font-display text-base mt-1.5">{label}</div>
+          <div className="font-mono text-[11px] ink-mute">≥ {threshold ?? "?"}%</div>
+        </div>
+      );
+    };
+    return (
+      <div className="grid gap-8 pt-6 lg:grid-cols-12">
+        <section className="lg:col-span-7 fade-up">
+          <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3">03 · Brief from the registrar</div>
+          <h2 className="font-display text-4xl tracking-tight sm:text-5xl">{examInfo.exam_name}</h2>
+          <p className="font-body ink-mute mt-4 max-w-2xl text-base leading-relaxed">{examInfo.rationale}</p>
+          <dl className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
+            <Stat label="Duration" value={`${examInfo.duration_minutes} min`} />
+            <Stat label="Questions" value={`${numQ}`} />
+            <Stat label="Format" value={examInfo.question_format} />
+            <Stat label="Difficulty" value={examInfo.difficulty} />
+          </dl>
+          <div className="hairline mt-10" />
+          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            <div>
+              <div className="font-body text-[11px] uppercase tracking-[0.18em] ink-mute mb-2">Marking</div>
+              <div className="font-body text-sm">{examInfo.marking_scheme}</div>
+              {examInfo.negative_marking ? (
+                <div className="font-mono mt-2 text-xs accent">Negative: −{examInfo.negative_marking} per wrong answer</div>
+              ) : null}
+            </div>
+            <div>
+              <div className="font-body text-[11px] uppercase tracking-[0.18em] ink-mute mb-2">Subjects</div>
+              <div className="flex flex-wrap gap-2">
+                {(examInfo.subjects || []).map((s, i) => (
+                  <span key={i} className="font-body chip rounded-full px-3 py-1 text-xs">{s}</span>
+                ))}
               </div>
             </div>
           </div>
-        );
-      }
+        </section>
 
-      const MODEL_OPTIONS = [
-        { id: "claude-sonnet-4-6", label: "Sonnet 4.6 — recommended", hint: "Balanced speed and quality" },
-        { id: "claude-opus-4-7", label: "Opus 4.7 — best quality", hint: "Slower, higher cost" },
-        { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5 — fastest", hint: "Cheapest, may produce fewer questions" },
-      ];
+        <aside className="lg:col-span-5 fade-up fade-up-2">
+          <div className="bg-paper rounded-2xl border-ink border p-7">
+            <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3">✶ Examination room</div>
+            <p className="font-display text-2xl leading-tight">When you press <em className="italic">Begin</em>, the clock starts.</p>
+            <ul className="font-body ink-mute mt-5 space-y-2 text-sm">
+              <li>· No pause once the timer is running.</li>
+              <li>· Answers auto-save as you go.</li>
+              <li>· Time-up triggers automatic submission.</li>
+              <li>· Your result is benchmarked against past attempts.</li>
+            </ul>
+            <button onClick={startExam} className="font-body btn-primary mt-7 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium uppercase tracking-[0.18em]">
+              <Icon name="play" className="h-4 w-4" /> Begin Examination
+            </button>
+            <div className="hairline mt-6" />
+            <div className="mt-5">
+              <div className="font-body text-[11px] uppercase tracking-[0.18em] ink-mute mb-3">Medal thresholds</div>
+              <div className="grid grid-cols-3 gap-3">
+                <MedalCard tier="gold" label="Gold" threshold={examInfo.medals?.gold_pct} />
+                <MedalCard tier="silver" label="Silver" threshold={examInfo.medals?.silver_pct} />
+                <MedalCard tier="bronze" label="Bronze" threshold={examInfo.medals?.bronze_pct} />
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    );
+  }
 
-      function ModelSelector({ selected, onChange }) {
-        return (
-          <div className="mt-5">
-            <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mb-2">Model</div>
-            <div className="space-y-2">
-              {MODEL_OPTIONS.map((m) => {
-                const active = selected === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => onChange(m.id)}
-                    className="w-full text-left rounded-xl px-3 py-2.5 transition-all"
-                    style={{
-                      border: active ? "1px solid #1a1612" : "1px solid #1a161220",
-                      background: active ? "#1a161208" : "transparent",
-                    }}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <div
-                        className="grid h-4 w-4 shrink-0 place-items-center rounded-full mt-0.5"
-                        style={{
-                          border: active ? "1px solid #1a1612" : "1px solid #1a161240",
-                        }}
-                      >
-                        {active && (
-                          <div
-                            className="h-2 w-2 rounded-full"
-                            style={{ background: "#1a1612" }}
-                          />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-body text-sm">{m.label}</div>
-                        <div className="font-mono text-[10px] ink-mute mt-0.5 break-all">
-                          {m.id} · {m.hint}
+  function ExamView({ examInfo, questions, answers, setAnswers, marked, setMarked, currentQ, setCurrentQ, timeLeft, onFinish }) {
+    const q = questions[currentQ];
+    const totalTime = (examInfo?.duration_minutes || 1) * 60;
+    const timePct = Math.max(0, Math.min(100, (timeLeft / totalTime) * 100));
+    const lowTime = timeLeft <= 60;
+    const setAnswer = (val) => setAnswers({ ...answers, [currentQ]: val });
+    const toggleMark = () => setMarked({ ...marked, [currentQ]: !marked[currentQ] });
+    const goPrev = () => setCurrentQ(Math.max(0, currentQ - 1));
+    const goNext = () => setCurrentQ(Math.min(questions.length - 1, currentQ + 1));
+    const answeredCount = Object.keys(answers).filter(k => answers[k] != null && answers[k] !== "").length;
+
+    return (
+      <div className="grid gap-6 pt-2 lg:grid-cols-12">
+        <div className="lg:col-span-12 fade-up">
+          <div className="bg-paper rounded-2xl border-ink border px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="font-display text-lg leading-none">{examInfo?.exam_name}</div>
+              <div className="font-body chip rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] ink-mute">{examInfo?.question_format}</div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="font-mono inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm tabular-nums"
+                   style={{ background: lowTime ? "#fee2e2" : "#ffffff66", color: lowTime ? "#7c2d29" : "#1a1612", border: lowTime ? "1px solid #7c2d29" : "1px solid #1a161230" }}>
+                <Icon name="clock" className="h-4 w-4" /> {formatTime(timeLeft)}
+              </div>
+              <button onClick={onFinish} className="font-body btn-primary inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium uppercase tracking-[0.18em]">
+                <Icon name="flag" className="h-3.5 w-3.5" /> Finish
+              </button>
+            </div>
+          </div>
+          <div className="mt-2 h-[2px] w-full overflow-hidden rounded-full" style={{ background: "#1a161215" }}>
+            <div className="h-full transition-all duration-1000" style={{ width: `${timePct}%`, backgroundColor: lowTime ? "#7c2d29" : "#1a1612" }} />
+          </div>
+        </div>
+
+        <section className="lg:col-span-8 fade-up fade-up-1">
+          <div className="bg-paper rounded-2xl border-ink border p-6 sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute">
+                  Question {currentQ + 1} of {questions.length}{q?.subject ? ` · ${q.subject}` : ""}
+                </div>
+                <div className="font-mono mt-1 text-[11px] ink-mute">
+                  {q?.type === "mcq" ? "Multiple choice" : "Numeric"} · {q?.marks ?? 1} mark{(q?.marks ?? 1) > 1 ? "s" : ""}
+                </div>
+              </div>
+              <button onClick={toggleMark}
+                      className="font-body inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.16em] transition-all"
+                      style={marked[currentQ] ? { background: "#7c2d29", color: "white" } : { border: "1px solid #1a161240" }}>
+                <Icon name="flag" className="h-3 w-3" /> {marked[currentQ] ? "Marked" : "Mark for review"}
+              </button>
+            </div>
+            <div className="hairline my-5" />
+            <MathText className="font-display text-xl sm:text-[22px] leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>{q?.text}</MathText>
+
+            {q?.type === "mcq" && (
+              <div className="mt-7 space-y-3">
+                {q.options.map((opt, i) => {
+                  const selected = answers[currentQ] === i;
+                  const letter = String.fromCharCode(65 + i);
+                  return (
+                    <button key={i} onClick={() => setAnswer(i)}
+                            className="w-full text-left rounded-xl border px-4 py-3.5 transition-all"
+                            style={{ borderColor: selected ? "#1a1612" : "#1a161230", background: selected ? "#1a161208" : "transparent" }}>
+                      <div className="flex items-start gap-3">
+                        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full font-mono text-sm"
+                             style={selected ? { background: "#1a1612", color: "#fbf6ec" } : { border: "1px solid #1a161240" }}>
+                          {letter}
                         </div>
+                        <MathText className="font-body text-base leading-relaxed">{opt}</MathText>
                       </div>
-                    </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {q?.type === "numeric" && (
+              <div className="mt-7">
+                <label className="font-body block text-[11px] uppercase tracking-[0.18em] ink-mute mb-2">Your numeric answer</label>
+                <input type="text" inputMode="decimal" value={answers[currentQ] ?? ""}
+                       onChange={(e) => setAnswer(e.target.value)} placeholder="e.g. 42 or 3.14"
+                       className="font-mono w-full max-w-sm rounded-xl px-4 py-3 text-lg outline-none"
+                       style={{ border: "1px solid #1a161240", background: "#ffffff80" }} />
+              </div>
+            )}
+
+            <div className="mt-8 flex items-center justify-between">
+              <button onClick={goPrev} disabled={currentQ === 0}
+                      className="font-body btn-ghost inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm disabled:opacity-30">
+                <Icon name="chevron-left" className="h-4 w-4" /> Previous
+              </button>
+              <button onClick={() => setAnswer(undefined)} className="font-body ink-mute hover:ink text-xs uppercase tracking-[0.18em]">
+                Clear answer
+              </button>
+              <button onClick={goNext} disabled={currentQ === questions.length - 1}
+                      className="font-body btn-ghost inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm disabled:opacity-30">
+                Next <Icon name="chevron-right" className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <aside className="lg:col-span-4 fade-up fade-up-2">
+          <div className="bg-paper rounded-2xl border-ink border p-5 sm:p-6 lg:sticky lg:top-4">
+            <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-4">Question palette</div>
+            <div className="grid grid-cols-6 gap-2 sm:grid-cols-8 lg:grid-cols-6">
+              {questions.map((_, i) => {
+                const isCurr = i === currentQ;
+                const isAns = answers[i] != null && answers[i] !== "";
+                const isMark = marked[i];
+                return (
+                  <button key={i} onClick={() => setCurrentQ(i)}
+                          className="relative grid aspect-square place-items-center rounded-lg font-mono text-sm transition-all"
+                          style={{
+                            background: isCurr ? "#1a1612" : isAns ? "#1a161215" : "transparent",
+                            color: isCurr ? "#fbf6ec" : "#1a1612",
+                            border: isCurr ? "1px solid #1a1612" : isAns ? "1px solid #1a161240" : "1px solid #1a161220",
+                          }}>
+                    {i + 1}
+                    {isMark && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full" style={{ background: "#7c2d29" }} />}
                   </button>
                 );
               })}
             </div>
+            <div className="hairline my-4" />
+            <ul className="font-body space-y-1.5 text-xs">
+              <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm" style={{ background: "#1a1612" }} />Current</li>
+              <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm" style={{ background: "#1a161215", border: "1px solid #1a161240" }} />Answered ({answeredCount})</li>
+              <li className="flex items-center gap-2"><span className="h-3 w-3 rounded-sm" style={{ border: "1px solid #1a161220" }} />Unanswered</li>
+              <li className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#7c2d29" }} />Marked for review</li>
+            </ul>
           </div>
-        );
-      }
+        </aside>
+      </div>
+    );
+  }
 
-      function KeyModal({ onClose }) {
-        const existing = window.__GET_ANTHROPIC_KEY();
-        const [mode, setMode] = useState(existing ? "view" : "edit");
-        const [input, setInput] = useState("");
-        const [reveal, setReveal] = useState(false);
-        const [justSaved, setJustSaved] = useState(false);
-        const [selectedModel, setSelectedModel] = useState(
-          localStorage.getItem("anthropic_model") || "claude-sonnet-4-6"
-        );
-        const inputRef = useRef(null);
-
-        useEffect(() => {
-          if (mode === "edit" && inputRef.current) inputRef.current.focus();
-        }, [mode]);
-
-        const updateModel = (id) => {
-          setSelectedModel(id);
-          localStorage.setItem("anthropic_model", id);
-        };
-
-        const save = () => {
-          const trimmed = input.trim();
-          if (!trimmed) return;
-          window.__SET_ANTHROPIC_KEY(trimmed);
-          setInput("");
-          setJustSaved(true);
-          setMode("view");
-          setTimeout(() => setJustSaved(false), 1800);
-        };
-
-        const forget = () => {
-          if (confirm("Forget the stored API key on this device? You'll need to re-enter it next time.")) {
-            window.__FORGET_ANTHROPIC_KEY();
-            setInput("");
-            setMode("edit");
-          }
-        };
-
-        const currentKey = window.__GET_ANTHROPIC_KEY();
-
-        return (
-          <div className="fixed inset-0 z-50 grid place-items-center p-4" style={{ background: "rgba(0,0,0,0.4)" }} onClick={onClose}>
-            <div onClick={(e) => e.stopPropagation()} className="bg-paper rounded-2xl border-ink border p-6 max-w-md w-full fade-up">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-2">Credentials</div>
-                  <div className="font-display text-2xl">API settings</div>
+  function ResultsView({ data, examInfo, onRestart }) {
+    const { total, max, percentage, correctCount, perQ, percentile, historyCount, medal, autoSubmitted } = data;
+    const medalColors = { gold: "#b9892e", silver: "#8a8a8a", bronze: "#a0633a" };
+    return (
+      <div className="pt-4">
+        <section className="grid gap-8 lg:grid-cols-12 fade-up">
+          <div className="lg:col-span-7">
+            <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3">04 · Final report</div>
+            <h2 className="font-display text-5xl sm:text-6xl tracking-tight">
+              {percentage >= 90 ? "Magnificent." : percentage >= 75 ? "Strong showing." : percentage >= 50 ? "A solid effort." : "Room to grow."}
+            </h2>
+            {autoSubmitted && <div className="font-body mt-2 text-xs uppercase tracking-[0.18em] accent">· time elapsed — submitted automatically</div>}
+            <p className="font-body ink-mute mt-4 max-w-xl">
+              {examInfo?.exam_name} · {correctCount} of {perQ.length} correct · scored {total.toFixed(1)} of {max}
+            </p>
+          </div>
+          <div className="lg:col-span-5">
+            <div className="bg-paper rounded-2xl border-ink border p-7 grid grid-cols-3 gap-5">
+              <div className="col-span-3 sm:col-span-1 text-center">
+                <div className="font-display text-6xl leading-none">
+                  {percentage.toFixed(0)}<span className="font-body text-2xl ink-mute">%</span>
                 </div>
-                <button onClick={onClose} className="ink-mute hover:ink shrink-0" aria-label="Close">
-                  <Icon name="x" className="h-5 w-5" />
+                <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-2">Overall score</div>
+              </div>
+              <div className="col-span-3 sm:col-span-1 text-center">
+                <div className="font-display text-6xl leading-none">
+                  {percentile != null ? percentile : "—"}
+                  {percentile != null && <span className="font-body text-2xl ink-mute">th</span>}
+                </div>
+                <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-2">
+                  {percentile != null ? "Predicted percentile" : "Building cohort"}
+                </div>
+              </div>
+              <div className="col-span-3 sm:col-span-1 text-center">
+                {medal ? (
+                  <>
+                    <Icon name="trophy" className="mx-auto h-12 w-12" style={{ color: medalColors[medal] }} />
+                    <div className="font-display text-2xl mt-1 capitalize">{medal}</div>
+                    <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-1">Predicted medal</div>
+                  </>
+                ) : (
+                  <>
+                    <Icon name="award" className="mx-auto h-12 w-12 ink-mute" />
+                    <div className="font-display text-2xl mt-1">No medal</div>
+                    <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-1">Keep going</div>
+                  </>
+                )}
+              </div>
+              <div className="col-span-3 hairline" />
+              <div className="col-span-3 font-body text-xs ink-mute text-center">
+                {historyCount > 1
+                  ? `Benchmarked against ${historyCount - 1} prior attempt${historyCount - 1 === 1 ? "" : "s"} of similar exams.`
+                  : "First attempt of this exam type — percentile will sharpen as more attempts are recorded."}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="hairline my-10" />
+
+        <section className="fade-up fade-up-2">
+          <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-5">Question-by-question review</div>
+          <div className="space-y-4">
+            {perQ.map((q, i) => <ReviewItem key={i} q={q} idx={i} />)}
+          </div>
+        </section>
+
+        <div className="mt-12 flex flex-wrap items-center justify-between gap-4 fade-up fade-up-3">
+          <button onClick={() => window.print()} className="font-body btn-ghost inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm uppercase tracking-[0.18em]">
+            Print report
+          </button>
+          <button onClick={onRestart} className="font-body btn-primary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm uppercase tracking-[0.18em]">
+            New examination
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function ReviewItem({ q, idx }) {
+    const [open, setOpen] = useState(false);
+    const wasAttempted = q.userAnswer != null && q.userAnswer !== "";
+    return (
+      <div className="bg-paper rounded-xl border p-4 sm:p-5 transition-all"
+           style={{ borderColor: q.isCorrect ? "#1f6e3540" : wasAttempted ? "#7c2d2940" : "#1a161220" }}>
+        <button onClick={() => setOpen(!open)} className="w-full text-left">
+          <div className="flex items-start gap-3">
+            {q.isCorrect ? (
+              <Icon name="check-circle-2" className="h-5 w-5 shrink-0 mt-0.5" style={{ color: "#1f6e35" }} />
+            ) : wasAttempted ? (
+              <Icon name="x-circle" className="h-5 w-5 shrink-0 mt-0.5 accent" />
+            ) : (
+              <Icon name="alert-circle" className="h-5 w-5 shrink-0 mt-0.5 ink-mute" />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="font-body text-[11px] uppercase tracking-[0.18em] ink-mute">
+                Q{idx + 1} · {q.subject || "—"} · {q.isCorrect ? "Correct" : wasAttempted ? "Incorrect" : "Skipped"}
+              </div>
+              <div className="font-display text-base mt-1 leading-snug" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                {(q.text || "").replace(/\$\$([^$]+)\$\$/g, "$1").replace(/\$([^$]+)\$/g, "$1")}
+              </div>
+            </div>
+          </div>
+        </button>
+        {open && (
+          <div className="mt-4 pl-8">
+            <div className="hairline mb-4" />
+            <MathText className="font-body text-base mb-4" style={{ whiteSpace: "pre-wrap" }}>{q.text}</MathText>
+            {q.type === "mcq" && (
+              <div className="space-y-2">
+                {q.options.map((opt, i) => {
+                  const isCorrect = i === q.correct_index;
+                  const isUser = i === q.userAnswer;
+                  return (
+                    <div key={i} className="font-body flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
+                         style={{
+                           background: isCorrect ? "#1f6e3515" : isUser ? "#7c2d2915" : "transparent",
+                           border: `1px solid ${isCorrect ? "#1f6e3540" : isUser ? "#7c2d2940" : "#1a161215"}`,
+                         }}>
+                      <span className="font-mono text-xs ink-mute w-5">{String.fromCharCode(65 + i)}</span>
+                      <MathText as="span" className="flex-1">{opt}</MathText>
+                      {isCorrect && <span className="font-body text-[10px] uppercase tracking-[0.18em]" style={{ color: "#1f6e35" }}>Correct</span>}
+                      {isUser && !isCorrect && <span className="font-body text-[10px] uppercase tracking-[0.18em] accent">Your answer</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {q.type === "numeric" && (
+              <div className="font-body text-sm space-y-1">
+                <div><span className="ink-mute">Your answer: </span><span className="font-mono">{wasAttempted ? q.userAnswer : "—"}</span></div>
+                <div><span className="ink-mute">Correct answer: </span><span className="font-mono">{q.correct_value}</span></div>
+              </div>
+            )}
+            {q.explanation && (
+              <div className="font-body mt-4 rounded-lg p-3 text-sm leading-relaxed" style={{ background: "#ffffff66" }}>
+                <div className="text-[11px] uppercase tracking-[0.18em] ink-mute mb-1">Solution</div>
+                <MathText>{q.explanation}</MathText>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function ConfirmModal({ title, body, onCancel, onConfirm }) {
+    return (
+      <div className="fixed inset-0 z-50 grid place-items-center p-4" style={{ background: "rgba(0,0,0,0.4)" }} onClick={onCancel}>
+        <div onClick={(e) => e.stopPropagation()} className="bg-paper rounded-2xl border-ink border p-6 max-w-md w-full fade-up">
+          <div className="font-display text-2xl mb-2">{title}</div>
+          <p className="font-body ink-mute text-sm">{body}</p>
+          <div className="mt-6 flex justify-end gap-3">
+            <button onClick={onCancel} className="font-body btn-ghost rounded-full px-5 py-2 text-sm uppercase tracking-[0.18em]">Keep going</button>
+            <button onClick={onConfirm} className="font-body btn-primary rounded-full px-5 py-2 text-sm uppercase tracking-[0.18em]">Submit now</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const MODEL_OPTIONS = [
+    { id: "claude-sonnet-4-6", label: "Sonnet 4.6 — recommended", hint: "Balanced speed and quality" },
+    { id: "claude-opus-4-7", label: "Opus 4.7 — best quality", hint: "Slower, higher cost" },
+    { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5 — fastest", hint: "Cheapest, may produce fewer questions" },
+  ];
+
+  function ModelSelector({ selected, onChange }) {
+    return (
+      <div className="mt-5">
+        <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mb-2">Model</div>
+        <div className="space-y-2">
+          {MODEL_OPTIONS.map((m) => {
+            const active = selected === m.id;
+            return (
+              <button
+                key={m.id}
+                onClick={() => onChange(m.id)}
+                className="w-full text-left rounded-xl px-3 py-2.5 transition-all"
+                style={{
+                  border: active ? "1px solid #1a1612" : "1px solid #1a161220",
+                  background: active ? "#1a161208" : "transparent",
+                }}
+              >
+                <div className="flex items-start gap-2.5">
+                  <div
+                    className="grid h-4 w-4 shrink-0 place-items-center rounded-full mt-0.5"
+                    style={{
+                      border: active ? "1px solid #1a1612" : "1px solid #1a161240",
+                    }}
+                  >
+                    {active && (
+                      <div
+                        className="h-2 w-2 rounded-full"
+                        style={{ background: "#1a1612" }}
+                      />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-body text-sm">{m.label}</div>
+                    <div className="font-mono text-[10px] ink-mute mt-0.5 break-all">
+                      {m.id} · {m.hint}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function KeyModal({ onClose }) {
+    const existing = window.__GET_ANTHROPIC_KEY();
+    const [mode, setMode] = useState(existing ? "view" : "edit");
+    const [input, setInput] = useState("");
+    const [reveal, setReveal] = useState(false);
+    const [justSaved, setJustSaved] = useState(false);
+    const [selectedModel, setSelectedModel] = useState(
+      localStorage.getItem("anthropic_model") || "claude-sonnet-4-6"
+    );
+    const inputRef = useRef(null);
+
+    useEffect(() => {
+      if (mode === "edit" && inputRef.current) inputRef.current.focus();
+    }, [mode]);
+
+    const updateModel = (id) => {
+      setSelectedModel(id);
+      localStorage.setItem("anthropic_model", id);
+    };
+
+    const save = () => {
+      const trimmed = input.trim();
+      if (!trimmed) return;
+      window.__SET_ANTHROPIC_KEY(trimmed);
+      setInput("");
+      setJustSaved(true);
+      setMode("view");
+      setTimeout(() => setJustSaved(false), 1800);
+    };
+
+    const forget = () => {
+      if (confirm("Forget the stored API key on this device? You'll need to re-enter it next time.")) {
+        window.__FORGET_ANTHROPIC_KEY();
+        setInput("");
+        setMode("edit");
+      }
+    };
+
+    const currentKey = window.__GET_ANTHROPIC_KEY();
+
+    return (
+      <div className="fixed inset-0 z-50 grid place-items-center p-4" style={{ background: "rgba(0,0,0,0.4)" }} onClick={onClose}>
+        <div onClick={(e) => e.stopPropagation()} className="bg-paper rounded-2xl border-ink border p-6 max-w-md w-full fade-up">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-2">Credentials</div>
+              <div className="font-display text-2xl">API settings</div>
+            </div>
+            <button onClick={onClose} className="ink-mute hover:ink shrink-0" aria-label="Close">
+              <Icon name="x" className="h-5 w-5" />
+            </button>
+          </div>
+
+          {mode === "view" && currentKey && (
+            <>
+              <p className="font-body ink-mute text-sm mt-3">
+                A key is stored on this device. It's used only to call <span className="font-mono">api.anthropic.com</span> and never leaves the browser otherwise.
+              </p>
+              <div className="mt-5 rounded-xl chip p-4">
+                <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mb-2">Current key</div>
+                <div className="font-mono text-sm break-all">
+                  {reveal ? currentKey : window.__MASK_KEY(currentKey)}
+                </div>
+                <button
+                  onClick={() => setReveal(!reveal)}
+                  className="font-body mt-2 text-xs ink-mute hover:ink inline-flex items-center gap-1"
+                >
+                  <Icon name={reveal ? "eye-off" : "eye"} className="h-3 w-3" />
+                  {reveal ? "Hide" : "Reveal"}
                 </button>
               </div>
 
-              {mode === "view" && currentKey && (
-                <>
-                  <p className="font-body ink-mute text-sm mt-3">
-                    A key is stored on this device. It's used only to call <span className="font-mono">api.anthropic.com</span> and never leaves the browser otherwise.
-                  </p>
-                  <div className="mt-5 rounded-xl chip p-4">
-                    <div className="font-body text-[10px] uppercase tracking-[0.22em] ink-mute mb-2">Current key</div>
-                    <div className="font-mono text-sm break-all">
-                      {reveal ? currentKey : window.__MASK_KEY(currentKey)}
-                    </div>
-                    <button
-                      onClick={() => setReveal(!reveal)}
-                      className="font-body mt-2 text-xs ink-mute hover:ink inline-flex items-center gap-1"
-                    >
-                      <Icon name={reveal ? "eye-off" : "eye"} className="h-3 w-3" />
-                      {reveal ? "Hide" : "Reveal"}
-                    </button>
-                  </div>
+              <ModelSelector selected={selectedModel} onChange={updateModel} />
 
-                  <ModelSelector selected={selectedModel} onChange={updateModel} />
-
-                  {justSaved && (
-                    <div className="font-body mt-3 text-xs accent">✓ Key updated.</div>
-                  )}
-                  <div className="mt-6 flex flex-wrap justify-between gap-2">
-                    <button
-                      onClick={forget}
-                      className="font-body btn-ghost rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]"
-                      style={{ borderColor: "#7c2d2960", color: "#7c2d29" }}
-                    >
-                      Forget key
-                    </button>
-                    <div className="flex gap-2">
-                      <button onClick={() => setMode("edit")} className="font-body btn-ghost rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]">
-                        Replace
-                      </button>
-                      <button onClick={onClose} className="font-body btn-primary rounded-full px-5 py-2 text-xs uppercase tracking-[0.18em]">
-                        Done
-                      </button>
-                    </div>
-                  </div>
-                </>
+              {justSaved && (
+                <div className="font-body mt-3 text-xs accent">✓ Key updated.</div>
               )}
+              <div className="mt-6 flex flex-wrap justify-between gap-2">
+                <button
+                  onClick={forget}
+                  className="font-body btn-ghost rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]"
+                  style={{ borderColor: "#7c2d2960", color: "#7c2d29" }}
+                >
+                  Forget key
+                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => setMode("edit")} className="font-body btn-ghost rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]">
+                    Replace
+                  </button>
+                  <button onClick={onClose} className="font-body btn-primary rounded-full px-5 py-2 text-xs uppercase tracking-[0.18em]">
+                    Done
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
 
-              {mode === "edit" && (
-                <>
-                  <p className="font-body ink-mute text-sm mt-3">
-                    {currentKey
-                      ? "Paste a new key. It will replace the existing one."
-                      : "Paste your Anthropic API key to begin. Get one at "}
-                    {!currentKey && (
-                      <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" className="accent underline">
-                        console.anthropic.com
-                      </a>
-                    )}
-                    {!currentKey && "."}
-                  </p>
-                  <input
-                    ref={inputRef}
-                    type="password"
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck="false"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") save(); }}
-                    placeholder="sk-ant-…"
-                    className="font-mono w-full mt-5 rounded-xl px-4 py-3 text-sm outline-none"
-                    style={{ border: "1px solid #1a161240", background: "#ffffff80" }}
-                  />
-                  <p className="font-body ink-mute text-[11px] mt-2">
-                    Stored in your browser's localStorage on this device only.
-                  </p>
+          {mode === "edit" && (
+            <>
+              <p className="font-body ink-mute text-sm mt-3">
+                {currentKey
+                  ? "Paste a new key. It will replace the existing one."
+                  : "Paste your Anthropic API key to begin. Get one at "}
+                {!currentKey && (
+                  <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" className="accent underline">
+                    console.anthropic.com
+                  </a>
+                )}
+                {!currentKey && "."}
+              </p>
+              <input
+                ref={inputRef}
+                type="password"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") save(); }}
+                placeholder="sk-ant-…"
+                className="font-mono w-full mt-5 rounded-xl px-4 py-3 text-sm outline-none"
+                style={{ border: "1px solid #1a161240", background: "#ffffff80" }}
+              />
+              <p className="font-body ink-mute text-[11px] mt-2">
+                Stored in your browser's localStorage on this device only.
+              </p>
 
-                  <ModelSelector selected={selectedModel} onChange={updateModel} />
+              <ModelSelector selected={selectedModel} onChange={updateModel} />
 
-                  <div className="mt-6 flex justify-end gap-2">
-                    {currentKey && (
-                      <button onClick={() => setMode("view")} className="font-body btn-ghost rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]">
-                        Cancel
-                      </button>
-                    )}
-                    <button
-                      onClick={save}
-                      disabled={!input.trim()}
-                      className="font-body btn-primary rounded-full px-5 py-2 text-xs uppercase tracking-[0.18em] disabled:opacity-40"
-                    >
-                      Save key
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        );
-      }
+              <div className="mt-6 flex justify-end gap-2">
+                {currentKey && (
+                  <button onClick={() => setMode("view")} className="font-body btn-ghost rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]">
+                    Cancel
+                  </button>
+                )}
+                <button
+                  onClick={save}
+                  disabled={!input.trim()}
+                  className="font-body btn-primary rounded-full px-5 py-2 text-xs uppercase tracking-[0.18em] disabled:opacity-40"
+                >
+                  Save key
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-      const root = ReactDOM.createRoot(document.getElementById("root"));
-      root.render(<App />);
-    </script>
+  const root = ReactDOM.createRoot(document.getElementById("root"));
+  root.render(<App />);
+</script>
+```
+
   </body>
 </html>
