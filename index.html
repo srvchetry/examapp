@@ -125,8 +125,44 @@
 
       // ─── Math text renderer (KaTeX) ─────────────────────────────────────
       // Renders text containing $...$, $$...$$, \(...\), \[...\] as math.
+      // Currency-style dollar signs ($1.75, $5.00, etc.) are isolated into
+      // separate spans so KaTeX's delimiter scan can't merge across them.
       const MathText = ({ children, className, style, as = "div" }) => {
         const ref = useRef(null);
+
+        // Pre-process: split string into segments where currency-pattern $
+        // is wrapped in a span. This guarantees KaTeX won't treat those $
+        // as math delimiters because its scan operates on text nodes.
+        const segments = React.useMemo(() => {
+          if (typeof children !== "string") return [children];
+          const text = children;
+          // Find every $ that looks like currency: $ followed by a digit
+          // (with optional space) — and isolate it.
+          const out = [];
+          let i = 0;
+          let buf = "";
+          while (i < text.length) {
+            const ch = text[i];
+            // Detect currency: $ followed by an optional space then a digit
+            if (ch === "$") {
+              let j = i + 1;
+              while (j < text.length && text[j] === " ") j++;
+              const isCurrency = j < text.length && /[0-9]/.test(text[j]);
+              if (isCurrency) {
+                if (buf) { out.push(buf); buf = ""; }
+                // Push the $ alone in a span, then continue scanning from i+1.
+                out.push(<span key={out.length} data-currency="true">$</span>);
+                i++;
+                continue;
+              }
+            }
+            buf += ch;
+            i++;
+          }
+          if (buf) out.push(buf);
+          return out;
+        }, [children]);
+
         useEffect(() => {
           let cancelled = false;
           let attempts = 0;
@@ -144,6 +180,7 @@
                   throwOnError: false,
                   errorColor: "#7c2d29",
                   ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
+                  ignoredClasses: ["currency-no-math"],
                 });
               } catch (e) {
                 console.warn("KaTeX render failed:", e);
@@ -159,7 +196,7 @@
           return () => { cancelled = true; };
         }, [children]);
         const Tag = as;
-        return <Tag ref={ref} className={className} style={style}>{children}</Tag>;
+        return <Tag ref={ref} className={className} style={style}>{segments}</Tag>;
       };
 
       // ─── Helpers ────────────────────────────────────────────────────────
@@ -187,21 +224,110 @@
       };
       const stripCodeFences = (txt) =>
         (txt || "").replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+      // Normalize a question for duplicate comparison:
+      // lowercase, strip punctuation/math/whitespace, replace digits with #
+      // (so "5+3=?" and "8+2=?" collapse to the same shape "#+#=?").
+      const normalizeForDedup = (text) => {
+        if (!text) return "";
+        return text
+          .toLowerCase()
+          .replace(/\$\$[^$]*\$\$/g, " MATH ")
+          .replace(/\$[^$]*\$/g, " MATH ")
+          .replace(/\\\([^)]*\\\)/g, " MATH ")
+          .replace(/\\\[[^\]]*\\\]/g, " MATH ")
+          .replace(/[0-9]+(\.[0-9]+)?/g, "#")
+          .replace(/[^a-z#\s]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      };
+
+      // Compare two normalized strings via Jaccard similarity over word tokens.
+      const jaccardSimilarity = (a, b) => {
+        const sa = new Set(a.split(" ").filter(Boolean));
+        const sb = new Set(b.split(" ").filter(Boolean));
+        if (sa.size === 0 && sb.size === 0) return 1;
+        let intersect = 0;
+        sa.forEach(t => { if (sb.has(t)) intersect++; });
+        const union = sa.size + sb.size - intersect;
+        return union === 0 ? 0 : intersect / union;
+      };
+
+      // Returns true if `q` is a near-duplicate of any question in `pool`.
+      const isDuplicateQuestion = (q, pool) => {
+        const target = normalizeForDedup(q.text);
+        if (!target) return false;
+        for (const other of pool) {
+          const cand = normalizeForDedup(other.text);
+          if (!cand) continue;
+          // Exact normalized match — definitely a duplicate
+          if (cand === target) return true;
+          // High Jaccard similarity on word tokens — structural duplicate
+          if (jaccardSimilarity(cand, target) >= 0.75) return true;
+        }
+        return false;
+      };
+
       const extractJSON = (txt) => {
         const cleaned = stripCodeFences(txt);
-        try { return JSON.parse(cleaned); } catch {}
+        // Try direct parse
+        try {
+          return JSON.parse(cleaned);
+        } catch {}
+        // Find first { or [ and try to parse from there
         const startObj = cleaned.indexOf("{");
         const startArr = cleaned.indexOf("[");
         let start = -1;
         if (startObj === -1) start = startArr;
         else if (startArr === -1) start = startObj;
         else start = Math.min(startObj, startArr);
-        if (start === -1) throw new Error("No JSON in response");
+        if (start === -1) throw new Error("No JSON found in response");
         const candidate = cleaned.slice(start);
+        // Try progressively shrinking from the end (works for objects)
         for (let end = candidate.length; end > 0; end--) {
-          try { return JSON.parse(candidate.slice(0, end)); } catch {}
+          try {
+            return JSON.parse(candidate.slice(0, end));
+          } catch {}
         }
-        throw new Error("Unparseable JSON");
+        // Salvage path for truncated `{ "questions": [ {...}, {...}, {...
+        // Find the questions array, walk forward keeping only complete top-level objects.
+        const arrayMatch = candidate.match(/"questions"\s*:\s*\[/);
+        if (arrayMatch) {
+          const arrayStart = arrayMatch.index + arrayMatch[0].length;
+          const items = [];
+          let i = arrayStart;
+          while (i < candidate.length) {
+            // skip whitespace and commas
+            while (i < candidate.length && /[\s,]/.test(candidate[i])) i++;
+            if (candidate[i] !== "{") break;
+            // walk to matching close brace, respecting strings and escapes
+            let depth = 0;
+            let inStr = false;
+            let escape = false;
+            const objStart = i;
+            for (; i < candidate.length; i++) {
+              const ch = candidate[i];
+              if (escape) { escape = false; continue; }
+              if (ch === "\\") { escape = true; continue; }
+              if (ch === '"') { inStr = !inStr; continue; }
+              if (inStr) continue;
+              if (ch === "{") depth++;
+              else if (ch === "}") {
+                depth--;
+                if (depth === 0) {
+                  const objStr = candidate.slice(objStart, i + 1);
+                  try {
+                    items.push(JSON.parse(objStr));
+                  } catch { /* skip malformed */ }
+                  i++;
+                  break;
+                }
+              }
+            }
+            if (depth !== 0) break; // truncated mid-object — stop here
+          }
+          if (items.length > 0) return { questions: items };
+        }
+        throw new Error("Could not parse JSON from model response");
       };
       const collectText = (data) =>
         (data?.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
@@ -228,6 +354,87 @@
           throw new Error(`API ${res.status}: ${t.slice(0, 250)}`);
         }
         return res.json();
+      }
+
+      // ─── Answer-key verification ────────────────────────────────────────
+      // Sends each question back to the model with explicit instructions to
+      // re-solve and report the correct answer. Patches mismatches and drops
+      // questions that can't be reliably verified.
+      async function verifyAnswerKeys(questions, log) {
+        const BATCH = 8;
+        const verified = [];
+        for (let start = 0; start < questions.length; start += BATCH) {
+          const batch = questions.slice(start, start + BATCH);
+          log(`Verifying questions ${start + 1}-${Math.min(start + BATCH, questions.length)}…`);
+
+          // Strip answer keys before sending so the model solves freshly.
+          const stripped = batch.map((q, i) => ({
+            id: i,
+            type: q.type,
+            text: q.text,
+            options: q.type === "mcq" ? q.options : undefined,
+          }));
+
+          const sys = `You are a meticulous answer key checker. For each question below, solve it carefully step by step and report the correct answer.
+
+For MCQ: report the 0-based index (0=A, 1=B, 2=C, 3=D) of the correct option.
+For numeric: report the exact numeric value as a string.
+
+Return EXACTLY this JSON (no commentary, no markdown):
+{
+  "answers": [
+    { "id": 0, "type": "mcq", "correct_index": 2, "explanation": "1-3 sentence rigorous solution.", "confidence": "high" | "medium" | "low" },
+    { "id": 1, "type": "numeric", "correct_value": "42.5", "explanation": "...", "confidence": "high" }
+  ]
+}
+
+Set confidence to "low" if the question is ambiguous, has multiple valid answers, or you cannot solve it confidently. Set "medium" if there is some uncertainty. Otherwise "high".`;
+
+          let parsed;
+          try {
+            const resp = await callClaude({
+              system: sys,
+              messages: [{ role: "user", content: [{ type: "text", text: JSON.stringify(stripped, null, 2) }] }],
+              max_tokens: 4000,
+            });
+            const txt = collectText(resp);
+            parsed = extractJSON(txt);
+          } catch (e) {
+            console.warn("Verification batch failed, keeping originals:", e);
+            verified.push(...batch);
+            continue;
+          }
+
+          const answers = (parsed && parsed.answers) || [];
+          batch.forEach((orig, i) => {
+            const v = answers.find(a => a && a.id === i);
+            if (!v) {
+              // No verification result — keep original but flag uncertainty
+              verified.push(orig);
+              return;
+            }
+            if (v.confidence === "low") {
+              // Drop ambiguous questions entirely rather than score them wrong
+              console.warn(`Dropping low-confidence question: ${orig.text.slice(0, 80)}`);
+              return;
+            }
+            // Patch the answer key with the verified version.
+            const patched = { ...orig };
+            if (orig.type === "mcq" && typeof v.correct_index === "number" && v.correct_index >= 0 && v.correct_index <= 3) {
+              patched.correct_index = v.correct_index;
+            } else if (orig.type === "numeric" && v.correct_value != null) {
+              patched.correct_value = String(v.correct_value);
+            }
+            // Prefer the verifier's explanation since it derives from the corrected answer.
+            if (v.explanation) patched.explanation = v.explanation;
+            verified.push(patched);
+          });
+        }
+        if (verified.length === 0) {
+          // Verification failed catastrophically — fall back to originals.
+          return questions;
+        }
+        return verified;
       }
 
       // ─── Local persistence for percentile cohort ────────────────────────
@@ -277,12 +484,18 @@
         const [showKeyModal, setShowKeyModal] = useState(false);
         const timerRef = useRef(null);
         const dragRef = useRef(null);
+        const handleSubmitRef = useRef(null);
 
         useEffect(() => {
           if (screen === "exam" && examStarted && timeLeft > 0) {
             timerRef.current = setInterval(() => {
               setTimeLeft(t => {
-                if (t <= 1) { clearInterval(timerRef.current); handleSubmit(true); return 0; }
+                if (t <= 1) {
+                  clearInterval(timerRef.current);
+                  // Use the ref so we always call the latest handleSubmit with current state
+                  if (handleSubmitRef.current) handleSubmitRef.current(true);
+                  return 0;
+                }
                 return t - 1;
               });
             }, 1000);
@@ -369,54 +582,152 @@ If no medal system, use defaults gold=90, silver=75, bronze=60.`;
             info.num_questions = cappedNumQ;
 
             log("Generating practice questions at matched difficulty…");
-            const genSystem = `You are an expert exam question writer. Generate exactly ${cappedNumQ} fresh ORIGINAL practice questions matching the difficulty, subjects, and format of the sample.
+            const genSystem = `You are an expert exam question writer. Generate exactly N fresh ORIGINAL practice questions matching the difficulty, subjects, and format of the sample provided. The exact count N will be specified in the user message.
 
-FORMATTING RULES FOR MATH:
-- Wrap inline math in single dollar signs: $x^2 + 1$, $-3$, $\\frac{a}{b}$.
+CRITICAL DISCIPLINE FOR CORRECTNESS:
+For EACH question, follow this process before writing it:
+1. Decide the question and write it.
+2. Solve it yourself, step by step, in the "explanation" field. Be rigorous. Do not skip steps.
+3. The final value/result of your worked solution is the correct answer.
+4. For MCQ: write 4 options where exactly one matches your worked solution. Set correct_index to the 0-based index of THAT option. Double-check by re-reading: "the worked solution gives X; option [correct_index] is X; other options are not X."
+5. For numeric: set correct_value to the exact numeric result of your worked solution.
+
+SCHEMA RULES:
+- For MCQ questions: include "options" (array of exactly 4 strings) and "correct_index" (integer 0-3). Do NOT include "correct_value" or "tolerance" fields.
+- For numeric questions: include "correct_value" (string) and "tolerance" (number). Do NOT include "options" or "correct_index" fields.
+- Keep explanations concise: 2-4 sentences maximum. Be rigorous but brief.
+
+FORMATTING RULES FOR MATH AND CURRENCY:
+- Wrap inline math in single dollar signs: $x^2 + 1$, $\\frac{a}{b}$.
 - Wrap display math in double dollar signs: $$\\int_0^1 x\\,dx$$.
 - Use standard LaTeX commands. KaTeX will render the output.
-- Do NOT use $...$ for non-math content (currency, plain numbers in prose). Only wrap actual math.
-- For simple integers in plain English ("the temperature was -3 degrees"), do NOT wrap in $...$ — write them as plain text.
+- For currency amounts (US dollars, prices, money), write as plain text WITHOUT LaTeX wrapping. Example: "Jenny has 5 dollars" or "Jenny has $5.00" — but if you write the dollar sign, the rest of the sentence MUST NOT contain another loose dollar sign, or KaTeX will treat the text between them as math. Prefer writing "5 dollars" or "USD 5.00" to avoid ambiguity.
+- For simple integers and negatives in plain English ("the temperature was -3 degrees"), do NOT wrap in $...$ — write them as plain text.
+- Never use $...$ around non-mathematical content.
 
-Return EXACTLY this JSON:
+Return EXACTLY this JSON (no commentary, no markdown fences):
 {
   "questions": [
     {
       "id": 1,
       "subject": "string",
-      "type": "mcq" | "numeric",
-      "text": "Full question text. Use plain text or simple LaTeX in $...$ for math.",
+      "type": "mcq",
+      "text": "Question text. Use simple LaTeX in $...$ for math.",
       "options": ["A", "B", "C", "D"],
       "correct_index": 0,
-      "correct_value": "42.5",
-      "tolerance": 0.01,
       "marks": 1,
-      "explanation": "1-3 sentence solution."
+      "explanation": "Brief rigorous solution."
     }
   ]
 }
-Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has correct_value and tolerance.`;
-            const genUserContent = [
-              ...fileBlocks,
-              { type: "text", text: `Exam spec:\n${JSON.stringify(info, null, 2)}\n\nGenerate ${cappedNumQ} questions now.` }
+
+Numeric question example:
+{
+  "id": 2,
+  "subject": "string",
+  "type": "numeric",
+  "text": "...",
+  "correct_value": "42.5",
+  "tolerance": 0.01,
+  "marks": 1,
+  "explanation": "..."
+}`;
+
+            // Generate in batches of 10 to stay well under token limits.
+            // Each batch gets its own API call; we accumulate results.
+            // Each subsequent batch is told what's already been generated so it
+            // can avoid repeating concepts and surface forms.
+            const BATCH_SIZE = 10;
+            const allQuestions = [];
+            const numBatches = Math.ceil(cappedNumQ / BATCH_SIZE);
+            const subjects = info.subjects || [];
+
+            // Topic-rotation seeds — different concept buckets for each batch
+            // so the model doesn't keep picking the same "obvious" topic.
+            const rotationHints = [
+              "Focus on foundational/direct application questions.",
+              "Focus on multi-step problems combining 2-3 concepts.",
+              "Focus on word problems and real-world applications.",
+              "Focus on edge cases, tricky cases, or conceptual traps.",
+              "Focus on slightly harder variants — push toward the upper end of the difficulty range.",
+              "Focus on questions that require careful reading and interpretation.",
             ];
-            const gen = await callClaude({
-              system: genSystem,
-              messages: [{ role: "user", content: genUserContent }],
-              max_tokens: 8000,
-            });
-            const genText = collectText(gen);
-            let qData;
-            try { qData = extractJSON(genText); }
-            catch { throw new Error("Could not parse questions: " + genText.slice(0, 250)); }
-            const qs = (qData.questions || []).filter(q =>
-              q && q.text &&
-              ((q.type === "mcq" && Array.isArray(q.options) && q.options.length === 4 && typeof q.correct_index === "number") ||
-               (q.type === "numeric" && q.correct_value != null))
-            );
-            if (qs.length === 0) throw new Error("No valid questions were generated.");
-            log(`Generated ${qs.length} questions.`);
-            setExamInfo(info); setQuestions(qs); setTimeLeft(info.duration_minutes * 60);
+
+            for (let b = 0; b < numBatches; b++) {
+              const remaining = cappedNumQ - allQuestions.length;
+              const thisBatch = Math.min(BATCH_SIZE, remaining);
+              if (thisBatch <= 0) break;
+              const startId = allQuestions.length + 1;
+              log(`Generating questions ${startId}-${startId + thisBatch - 1} of ${cappedNumQ}…`);
+
+              // Build a "previously generated" summary to forbid repeats.
+              // Only include question stems (no answers) — keeps the prompt small.
+              const priorSummary = allQuestions.length > 0
+                ? `\n\nQUESTIONS ALREADY GENERATED (DO NOT REPEAT OR PARAPHRASE THESE):\n${
+                    allQuestions.map((q, i) => `${i + 1}. [${q.subject || "?"}] ${q.text.slice(0, 200)}`).join("\n")
+                  }\n\nYour new questions must cover DIFFERENT scenarios, DIFFERENT numbers, and where possible DIFFERENT sub-topics from the list above. Do not produce structural near-duplicates (same problem with different numbers).`
+                : "";
+
+              const subjectSeed = subjects.length > 1
+                ? ` Vary subjects across this batch — use the subjects: ${subjects.join(", ")}.`
+                : "";
+
+              const rotation = rotationHints[b % rotationHints.length];
+
+              const batchUserContent = [
+                ...fileBlocks,
+                {
+                  type: "text",
+                  text: `Exam spec:\n${JSON.stringify(info, null, 2)}\n\nGenerate exactly ${thisBatch} questions now.${subjectSeed}\n\nBatch focus: ${rotation}${priorSummary}\n\nUse IDs starting at ${startId}. Return ONLY the JSON object — no preamble, no markdown fences, nothing else. Begin your response with { and end with }.`,
+                },
+              ];
+
+              let qData;
+              try {
+                const gen = await callClaude({
+                  system: genSystem,
+                  messages: [{ role: "user", content: batchUserContent }],
+                  max_tokens: 6000,
+                });
+                const genText = collectText(gen);
+                qData = extractJSON(genText);
+              } catch (e) {
+                console.warn(`Batch ${b + 1} failed:`, e);
+                log(`Batch ${b + 1} failed (${e.message.slice(0, 80)}); continuing…`);
+                continue;
+              }
+
+              const batchQs = (qData.questions || []).filter(q =>
+                q && q.text &&
+                ((q.type === "mcq" && Array.isArray(q.options) && q.options.length === 4 && typeof q.correct_index === "number") ||
+                 (q.type === "numeric" && q.correct_value != null))
+              );
+
+              // Client-side dedup safety net — drop any near-duplicate of an
+              // already-accepted question even if the model ignored the instruction.
+              const accepted = [];
+              for (const q of batchQs) {
+                if (!isDuplicateQuestion(q, allQuestions)) {
+                  accepted.push(q);
+                  allQuestions.push(q);
+                } else {
+                  console.warn("Dropped duplicate question:", q.text.slice(0, 80));
+                }
+              }
+              if (accepted.length < batchQs.length) {
+                log(`Filtered ${batchQs.length - accepted.length} duplicate(s) from this batch.`);
+              }
+            }
+
+            if (allQuestions.length === 0) throw new Error("No valid questions were generated. Try uploading a different sample paper or switching to a more capable model.");
+            log(`Generated ${allQuestions.length} questions. Verifying answer keys…`);
+
+            // Verification pass: re-check each question's correct answer to catch
+            // mismatches between the worked solution and the marked correct option.
+            const verified = await verifyAnswerKeys(allQuestions, log);
+            log(`Verification complete (${verified.length} questions ready).`);
+
+            setExamInfo(info); setQuestions(verified); setTimeLeft(info.duration_minutes * 60);
             setScreen("ready");
           } catch (e) {
             console.error(e);
@@ -440,19 +751,24 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
           const perQ = [];
           questions.forEach((q, i) => {
             const ans = answers[i];
-            const m = q.marks || 1; max += m;
+            const marks = q.marks || 1;
+            max += marks;
             let isCorrect = false;
-            if (ans != null && ans !== "") {
-              if (q.type === "mcq") isCorrect = Number(ans) === Number(q.correct_index);
-              else if (q.type === "numeric") {
+            const wasAttempted = ans != null && ans !== "" && ans !== undefined;
+            if (wasAttempted) {
+              if (q.type === "mcq") {
+                isCorrect = Number(ans) === Number(q.correct_index);
+              } else if (q.type === "numeric") {
                 const u = parseFloat(String(ans).trim());
                 const c = parseFloat(String(q.correct_value).trim());
                 const tol = q.tolerance || 0.01;
                 if (!isNaN(u) && !isNaN(c) && Math.abs(u - c) <= tol) isCorrect = true;
               }
             }
-            if (isCorrect) { total += m; correctCount += 1; }
-            else if (ans != null && ans !== "" && examInfo?.negative_marking) {
+            if (isCorrect) {
+              total += marks;
+              correctCount += 1;
+            } else if (wasAttempted && examInfo?.negative_marking) {
               total -= examInfo.negative_marking;
             }
             perQ.push({ ...q, userAnswer: ans, isCorrect });
@@ -461,14 +777,17 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
           const examType = examInfo?.exam_short || examInfo?.exam_name || "generic";
           const history = saveScore(examType, percentage);
           const percentile = computePercentile(history.slice(0, -1), percentage);
-          const m = examInfo?.medals || { gold_pct: 90, silver_pct: 75, bronze_pct: 60 };
+          const medalThresholds = examInfo?.medals || { gold_pct: 90, silver_pct: 75, bronze_pct: 60 };
           let medal = null;
-          if (percentage >= m.gold_pct) medal = "gold";
-          else if (percentage >= m.silver_pct) medal = "silver";
-          else if (percentage >= m.bronze_pct) medal = "bronze";
+          if (percentage >= medalThresholds.gold_pct) medal = "gold";
+          else if (percentage >= medalThresholds.silver_pct) medal = "silver";
+          else if (percentage >= medalThresholds.bronze_pct) medal = "bronze";
           setScoreData({ total, max, percentage, correctCount, perQ, percentile, historyCount: history.length, medal, autoSubmitted: auto });
           setScreen("results");
         }, [questions, answers, examInfo]);
+
+        // Keep the ref in sync so the timer's setInterval callback always sees the latest version
+        useEffect(() => { handleSubmitRef.current = handleSubmit; }, [handleSubmit]);
 
         const reset = () => {
           setScreen("upload"); setFiles([]); setTestName(""); setExamInfo(null);
@@ -765,7 +1084,15 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
         const totalTime = (examInfo?.duration_minutes || 1) * 60;
         const timePct = Math.max(0, Math.min(100, (timeLeft / totalTime) * 100));
         const lowTime = timeLeft <= 60;
-        const setAnswer = (val) => setAnswers({ ...answers, [currentQ]: val });
+        const setAnswer = (val) => {
+          const next = { ...answers };
+          if (val === undefined) {
+            delete next[currentQ];
+          } else {
+            next[currentQ] = val;
+          }
+          setAnswers(next);
+        };
         const toggleMark = () => setMarked({ ...marked, [currentQ]: !marked[currentQ] });
         const goPrev = () => setCurrentQ(Math.max(0, currentQ - 1));
         const goNext = () => setCurrentQ(Math.min(questions.length - 1, currentQ + 1));
@@ -773,23 +1100,27 @@ Every MCQ has exactly 4 options and correct_index in 0-3. Every numeric has corr
 
         return (
           <div className="grid gap-6 pt-2 lg:grid-cols-12">
-            <div className="lg:col-span-12 fade-up">
-              <div className="bg-paper rounded-2xl border-ink border px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="font-display text-lg leading-none">{examInfo?.exam_name}</div>
-                  <div className="font-body chip rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] ink-mute">{examInfo?.question_format}</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="font-mono inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm tabular-nums"
-                       style={{ background: lowTime ? "#fee2e2" : "#ffffff66", color: lowTime ? "#7c2d29" : "#1a1612", border: lowTime ? "1px solid #7c2d29" : "1px solid #1a161230" }}>
-                    <Icon name="clock" className="h-4 w-4" /> {formatTime(timeLeft)}
+            <div className="lg:col-span-12 fade-up sticky top-0 z-30" style={{ background: "linear-gradient(180deg, #f5efe4 0%, #efe7d8 70%, transparent 100%)", paddingTop: "8px", paddingBottom: "8px" }}>
+              <div className="bg-paper rounded-2xl border-ink border px-3 sm:px-5 py-3 flex items-center justify-between gap-2 sm:gap-4">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                  <div className="font-display text-sm sm:text-lg leading-tight truncate" title={examInfo?.exam_name}>
+                    {examInfo?.exam_name}
                   </div>
-                  <button onClick={onFinish} className="font-body btn-primary inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium uppercase tracking-[0.18em]">
-                    <Icon name="flag" className="h-3.5 w-3.5" /> Finish
+                  <div className="font-body chip rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] ink-mute hidden md:inline-block shrink-0">
+                    {examInfo?.question_format}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="font-mono inline-flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm tabular-nums shrink-0"
+                       style={{ background: lowTime ? "#fee2e2" : "#ffffff66", color: lowTime ? "#7c2d29" : "#1a1612", border: lowTime ? "1px solid #7c2d29" : "1px solid #1a161230" }}>
+                    <Icon name="clock" className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> {formatTime(timeLeft)}
+                  </div>
+                  <button onClick={onFinish} className="font-body btn-primary inline-flex items-center gap-1.5 rounded-full px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-medium uppercase tracking-[0.14em] sm:tracking-[0.18em] shrink-0">
+                    <Icon name="flag" className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Finish
                   </button>
                 </div>
               </div>
-              <div className="mt-2 h-[2px] w-full overflow-hidden rounded-full" style={{ background: "#1a161215" }}>
+              <div className="mt-1.5 h-[2px] w-full overflow-hidden rounded-full" style={{ background: "#1a161215" }}>
                 <div className="h-full transition-all duration-1000" style={{ width: `${timePct}%`, backgroundColor: lowTime ? "#7c2d29" : "#1a1612" }} />
               </div>
             </div>
