@@ -145,106 +145,131 @@ const Icon = _ref => {
 };
 
 // ─── Math text renderer (KaTeX) ─────────────────────────────────────
-// Renders text containing $...$, $$...$$, \(...\), \[...\] as math.
-// Currency-style dollar signs ($1.75, $5.00, etc.) are isolated into
-// separate spans so KaTeX's delimiter scan can't merge across them.
+// Critical: KaTeX mutates DOM by replacing text nodes with rendered spans.
+// If React tries to reconcile that mutated DOM on re-render, it can
+// corrupt content, show stale text from previous questions, or crash
+// during navigation. To avoid that, we render KaTeX into a DETACHED div,
+// grab its innerHTML, and feed it into React via dangerouslySetInnerHTML.
+// React then owns a single opaque HTML string and never fights with KaTeX.
+
+const HTML_ESCAPE = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;"
+};
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => HTML_ESCAPE[c]);
+const CURRENCY_PLACEHOLDER = "\uE000"; // private-use area, won't appear in normal text
+
+// Convert text containing $...$, $$...$$, currency $X.XX into safe HTML.
+// Returns an HTML string. Falls back to plain (escaped) text if KaTeX
+// hasn't loaded yet.
+const renderMathToHTML = text => {
+  if (typeof text !== "string") return escapeHtml(text == null ? "" : String(text));
+  // Step 1: protect currency $ by swapping to a placeholder
+  let protectedText = "";
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === "$") {
+      let j = i + 1;
+      while (j < text.length && text[j] === " ") j++;
+      if (j < text.length && /[0-9]/.test(text[j])) {
+        // Currency: replace this $ with placeholder
+        protectedText += CURRENCY_PLACEHOLDER;
+        i++;
+        continue;
+      }
+    }
+    protectedText += ch;
+    i++;
+  }
+
+  // Step 2: render math via KaTeX into a detached div
+  if (window.renderMathInElement) {
+    try {
+      const sandbox = document.createElement("div");
+      // Escape HTML in the text so user content can't inject markup,
+      // but keep KaTeX delimiters intact.
+      sandbox.innerHTML = escapeHtml(protectedText);
+      window.renderMathInElement(sandbox, {
+        delimiters: [{
+          left: "$$",
+          right: "$$",
+          display: true
+        }, {
+          left: "$",
+          right: "$",
+          display: false
+        }, {
+          left: "\\(",
+          right: "\\)",
+          display: false
+        }, {
+          left: "\\[",
+          right: "\\]",
+          display: true
+        }],
+        throwOnError: false,
+        errorColor: "#7c2d29",
+        ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+      });
+      // Step 3: restore currency $ from placeholders
+      return sandbox.innerHTML.split(CURRENCY_PLACEHOLDER).join("$");
+    } catch (e) {
+      console.warn("KaTeX render failed, falling back to plain:", e);
+    }
+  }
+  // KaTeX not loaded or threw — escape and restore currency
+  return escapeHtml(protectedText).split(CURRENCY_PLACEHOLDER).join("$");
+};
 const MathText = _ref2 => {
   let children = _ref2.children,
     className = _ref2.className,
     style = _ref2.style,
     _ref2$as = _ref2.as,
     as = _ref2$as === void 0 ? "div" : _ref2$as;
-  const ref = useRef(null);
-
-  // Pre-process: split string into segments where currency-pattern $
-  // is wrapped in a span. This guarantees KaTeX won't treat those $
-  // as math delimiters because its scan operates on text nodes.
-  const segments = React.useMemo(() => {
-    if (typeof children !== "string") return [children];
-    const text = children;
-    // Find every $ that looks like currency: $ followed by a digit
-    // (with optional space) — and isolate it.
-    const out = [];
-    let i = 0;
-    let buf = "";
-    while (i < text.length) {
-      const ch = text[i];
-      // Detect currency: $ followed by an optional space then a digit
-      if (ch === "$") {
-        let j = i + 1;
-        while (j < text.length && text[j] === " ") j++;
-        const isCurrency = j < text.length && /[0-9]/.test(text[j]);
-        if (isCurrency) {
-          if (buf) {
-            out.push(buf);
-            buf = "";
-          }
-          // Push the $ alone in a span, then continue scanning from i+1.
-          out.push(/*#__PURE__*/React.createElement("span", {
-            key: out.length,
-            "data-currency": "true"
-          }, "$"));
-          i++;
-          continue;
-        }
-      }
-      buf += ch;
-      i++;
-    }
-    if (buf) out.push(buf);
-    return out;
-  }, [children]);
+  const _useState = useState(() => typeof children === "string" ? renderMathToHTML(children) : ""),
+    _useState2 = _slicedToArray(_useState, 2),
+    html = _useState2[0],
+    setHtml = _useState2[1];
+  const passthrough = typeof children !== "string";
   useEffect(() => {
+    if (passthrough) return;
+    // Render synchronously if KaTeX is ready; otherwise poll briefly.
     let cancelled = false;
     let attempts = 0;
-    const render = () => {
-      if (cancelled || !ref.current) return;
+    const tryRender = () => {
+      if (cancelled) return;
       if (window.renderMathInElement) {
-        try {
-          window.renderMathInElement(ref.current, {
-            delimiters: [{
-              left: "$$",
-              right: "$$",
-              display: true
-            }, {
-              left: "$",
-              right: "$",
-              display: false
-            }, {
-              left: "\\(",
-              right: "\\)",
-              display: false
-            }, {
-              left: "\\[",
-              right: "\\]",
-              display: true
-            }],
-            throwOnError: false,
-            errorColor: "#7c2d29",
-            ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
-            ignoredClasses: ["currency-no-math"]
-          });
-        } catch (e) {
-          console.warn("KaTeX render failed:", e);
-        }
+        setHtml(renderMathToHTML(children));
       } else if (attempts < 40) {
         attempts += 1;
-        setTimeout(render, 100);
+        setTimeout(tryRender, 100);
       } else {
-        console.warn("KaTeX did not load after 4s; rendering plain text.");
+        setHtml(renderMathToHTML(children)); // commit plain-text fallback
       }
     };
-    render();
+    tryRender();
     return () => {
       cancelled = true;
     };
-  }, [children]);
+  }, [children, passthrough]);
   const Tag = as;
+  if (passthrough) {
+    return /*#__PURE__*/React.createElement(Tag, {
+      className: className,
+      style: style
+    }, children);
+  }
   return /*#__PURE__*/React.createElement(Tag, {
-    ref: ref,
     className: className,
-    style: style
-  }, segments);
+    style: style,
+    dangerouslySetInnerHTML: {
+      __html: html
+    }
+  });
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -604,66 +629,66 @@ const PaperGrain = () => /*#__PURE__*/React.createElement("svg", {
 
 // ─── App ────────────────────────────────────────────────────────────
 function App() {
-  const _useState = useState("upload"),
-    _useState2 = _slicedToArray(_useState, 2),
-    screen = _useState2[0],
-    setScreen = _useState2[1];
-  const _useState3 = useState([]),
+  const _useState3 = useState("upload"),
     _useState4 = _slicedToArray(_useState3, 2),
-    files = _useState4[0],
-    setFiles = _useState4[1];
-  const _useState5 = useState(""),
+    screen = _useState4[0],
+    setScreen = _useState4[1];
+  const _useState5 = useState([]),
     _useState6 = _slicedToArray(_useState5, 2),
-    testName = _useState6[0],
-    setTestName = _useState6[1];
-  const _useState7 = useState(null),
+    files = _useState6[0],
+    setFiles = _useState6[1];
+  const _useState7 = useState(""),
     _useState8 = _slicedToArray(_useState7, 2),
-    examInfo = _useState8[0],
-    setExamInfo = _useState8[1];
-  const _useState9 = useState([]),
+    testName = _useState8[0],
+    setTestName = _useState8[1];
+  const _useState9 = useState(null),
     _useState0 = _slicedToArray(_useState9, 2),
-    questions = _useState0[0],
-    setQuestions = _useState0[1];
-  const _useState1 = useState({}),
+    examInfo = _useState0[0],
+    setExamInfo = _useState0[1];
+  const _useState1 = useState([]),
     _useState10 = _slicedToArray(_useState1, 2),
-    answers = _useState10[0],
-    setAnswers = _useState10[1];
+    questions = _useState10[0],
+    setQuestions = _useState10[1];
   const _useState11 = useState({}),
     _useState12 = _slicedToArray(_useState11, 2),
-    marked = _useState12[0],
-    setMarked = _useState12[1];
-  const _useState13 = useState(0),
+    answers = _useState12[0],
+    setAnswers = _useState12[1];
+  const _useState13 = useState({}),
     _useState14 = _slicedToArray(_useState13, 2),
-    currentQ = _useState14[0],
-    setCurrentQ = _useState14[1];
+    marked = _useState14[0],
+    setMarked = _useState14[1];
   const _useState15 = useState(0),
     _useState16 = _slicedToArray(_useState15, 2),
-    timeLeft = _useState16[0],
-    setTimeLeft = _useState16[1];
-  const _useState17 = useState(false),
+    currentQ = _useState16[0],
+    setCurrentQ = _useState16[1];
+  const _useState17 = useState(0),
     _useState18 = _slicedToArray(_useState17, 2),
-    examStarted = _useState18[0],
-    setExamStarted = _useState18[1];
-  const _useState19 = useState([]),
+    timeLeft = _useState18[0],
+    setTimeLeft = _useState18[1];
+  const _useState19 = useState(false),
     _useState20 = _slicedToArray(_useState19, 2),
-    analysisLog = _useState20[0],
-    setAnalysisLog = _useState20[1];
-  const _useState21 = useState(null),
+    examStarted = _useState20[0],
+    setExamStarted = _useState20[1];
+  const _useState21 = useState([]),
     _useState22 = _slicedToArray(_useState21, 2),
-    scoreData = _useState22[0],
-    setScoreData = _useState22[1];
+    analysisLog = _useState22[0],
+    setAnalysisLog = _useState22[1];
   const _useState23 = useState(null),
     _useState24 = _slicedToArray(_useState23, 2),
-    error = _useState24[0],
-    setError = _useState24[1];
-  const _useState25 = useState(false),
+    scoreData = _useState24[0],
+    setScoreData = _useState24[1];
+  const _useState25 = useState(null),
     _useState26 = _slicedToArray(_useState25, 2),
-    showFinishConfirm = _useState26[0],
-    setShowFinishConfirm = _useState26[1];
+    error = _useState26[0],
+    setError = _useState26[1];
   const _useState27 = useState(false),
     _useState28 = _slicedToArray(_useState27, 2),
-    showKeyModal = _useState28[0],
-    setShowKeyModal = _useState28[1];
+    showFinishConfirm = _useState28[0],
+    setShowFinishConfirm = _useState28[1];
+  const _useState29 = useState(false),
+    _useState30 = _slicedToArray(_useState29, 2),
+    showKeyModal = _useState30[0],
+    setShowKeyModal = _useState30[1];
   const timerRef = useRef(null);
   const dragRef = useRef(null);
   const handleSubmitRef = useRef(null);
@@ -1577,6 +1602,7 @@ function ExamView(_ref9) {
   }))), /*#__PURE__*/React.createElement("section", {
     className: "lg:col-span-8 fade-up fade-up-1"
   }, /*#__PURE__*/React.createElement("div", {
+    key: `q-${currentQ}`,
     className: "bg-paper rounded-2xl border-ink border p-6 sm:p-8"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-start justify-between gap-4"
@@ -1603,13 +1629,13 @@ function ExamView(_ref9) {
     style: {
       whiteSpace: "pre-wrap"
     }
-  }, q === null || q === void 0 ? void 0 : q.text), (q === null || q === void 0 ? void 0 : q.type) === "mcq" && /*#__PURE__*/React.createElement("div", {
+  }, q === null || q === void 0 ? void 0 : q.text), (q === null || q === void 0 ? void 0 : q.type) === "mcq" && Array.isArray(q === null || q === void 0 ? void 0 : q.options) && /*#__PURE__*/React.createElement("div", {
     className: "mt-7 space-y-3"
   }, q.options.map((opt, i) => {
     const selected = answers[currentQ] === i;
     const letter = String.fromCharCode(65 + i);
     return /*#__PURE__*/React.createElement("button", {
-      key: i,
+      key: `${currentQ}-${i}`,
       onClick: () => setAnswer(i),
       className: "w-full text-left rounded-xl border px-4 py-3.5 transition-all",
       style: {
@@ -1628,7 +1654,7 @@ function ExamView(_ref9) {
       }
     }, letter), /*#__PURE__*/React.createElement(MathText, {
       className: "font-body text-base leading-relaxed"
-    }, opt)));
+    }, opt == null ? "" : String(opt))));
   })), (q === null || q === void 0 ? void 0 : q.type) === "numeric" && /*#__PURE__*/React.createElement("div", {
     className: "mt-7"
   }, /*#__PURE__*/React.createElement("label", {
@@ -1825,10 +1851,10 @@ function ResultsView(_ref0) {
 function ReviewItem(_ref1) {
   let q = _ref1.q,
     idx = _ref1.idx;
-  const _useState29 = useState(false),
-    _useState30 = _slicedToArray(_useState29, 2),
-    open = _useState30[0],
-    setOpen = _useState30[1];
+  const _useState31 = useState(false),
+    _useState32 = _slicedToArray(_useState31, 2),
+    open = _useState32[0],
+    setOpen = _useState32[1];
   const wasAttempted = q.userAnswer != null && q.userAnswer !== "";
   return /*#__PURE__*/React.createElement("div", {
     className: "bg-paper rounded-xl border p-4 sm:p-5 transition-all",
@@ -1873,13 +1899,13 @@ function ReviewItem(_ref1) {
     style: {
       whiteSpace: "pre-wrap"
     }
-  }, q.text), q.type === "mcq" && /*#__PURE__*/React.createElement("div", {
+  }, q.text), q.type === "mcq" && Array.isArray(q.options) && /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
   }, q.options.map((opt, i) => {
     const isCorrect = i === q.correct_index;
     const isUser = i === q.userAnswer;
     return /*#__PURE__*/React.createElement("div", {
-      key: i,
+      key: `r-${idx}-${i}`,
       className: "font-body flex items-center gap-2 rounded-lg px-3 py-2 text-sm",
       style: {
         background: isCorrect ? "#1f6e3515" : isUser ? "#7c2d2915" : "transparent",
@@ -1890,7 +1916,7 @@ function ReviewItem(_ref1) {
     }, String.fromCharCode(65 + i)), /*#__PURE__*/React.createElement(MathText, {
       as: "span",
       className: "flex-1"
-    }, opt), isCorrect && /*#__PURE__*/React.createElement("span", {
+    }, opt == null ? "" : String(opt)), isCorrect && /*#__PURE__*/React.createElement("span", {
       className: "font-body text-[10px] uppercase tracking-[0.18em]",
       style: {
         color: "#1f6e35"
@@ -2001,26 +2027,26 @@ function ModelSelector(_ref11) {
 function KeyModal(_ref12) {
   let onClose = _ref12.onClose;
   const existing = window.__GET_ANTHROPIC_KEY();
-  const _useState31 = useState(existing ? "view" : "edit"),
-    _useState32 = _slicedToArray(_useState31, 2),
-    mode = _useState32[0],
-    setMode = _useState32[1];
-  const _useState33 = useState(""),
+  const _useState33 = useState(existing ? "view" : "edit"),
     _useState34 = _slicedToArray(_useState33, 2),
-    input = _useState34[0],
-    setInput = _useState34[1];
-  const _useState35 = useState(false),
+    mode = _useState34[0],
+    setMode = _useState34[1];
+  const _useState35 = useState(""),
     _useState36 = _slicedToArray(_useState35, 2),
-    reveal = _useState36[0],
-    setReveal = _useState36[1];
+    input = _useState36[0],
+    setInput = _useState36[1];
   const _useState37 = useState(false),
     _useState38 = _slicedToArray(_useState37, 2),
-    justSaved = _useState38[0],
-    setJustSaved = _useState38[1];
-  const _useState39 = useState(localStorage.getItem("anthropic_model") || "claude-sonnet-4-6"),
+    reveal = _useState38[0],
+    setReveal = _useState38[1];
+  const _useState39 = useState(false),
     _useState40 = _slicedToArray(_useState39, 2),
-    selectedModel = _useState40[0],
-    setSelectedModel = _useState40[1];
+    justSaved = _useState40[0],
+    setJustSaved = _useState40[1];
+  const _useState41 = useState(localStorage.getItem("anthropic_model") || "claude-sonnet-4-6"),
+    _useState42 = _slicedToArray(_useState41, 2),
+    selectedModel = _useState42[0],
+    setSelectedModel = _useState42[1];
   const inputRef = useRef(null);
   useEffect(() => {
     if (mode === "edit" && inputRef.current) inputRef.current.focus();
@@ -2147,8 +2173,69 @@ function KeyModal(_ref12) {
     className: "font-body btn-primary rounded-full px-5 py-2 text-xs uppercase tracking-[0.18em] disabled:opacity-40"
   }, "Save key")))));
 }
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      error: null
+    };
+  }
+  static getDerivedStateFromError(error) {
+    return {
+      error
+    };
+  }
+  componentDidCatch(error, info) {
+    const msg = error && error.message || String(error);
+    const stack = info && info.componentStack || error && error.stack || "";
+    console.error("React caught:", error, info);
+    if (window.__SHOW_FATAL) {
+      window.__SHOW_FATAL("React component error: " + msg + "\n\nComponent stack:" + stack.split("\n").slice(0, 8).join("\n"));
+    }
+  }
+  render() {
+    if (this.state.error) {
+      return React.createElement("div", {
+        style: {
+          padding: "48px 24px",
+          fontFamily: "Georgia, serif",
+          maxWidth: 560,
+          margin: "0 auto",
+          textAlign: "center"
+        }
+      }, React.createElement("div", {
+        style: {
+          fontSize: 22,
+          marginBottom: 8
+        }
+      }, "Something went wrong."), React.createElement("div", {
+        style: {
+          fontSize: 13,
+          color: "#6b5d4a",
+          marginBottom: 16
+        }
+      }, this.state.error && this.state.error.message || ""), React.createElement("button", {
+        onClick: () => {
+          this.setState({
+            error: null
+          });
+          window.location.reload();
+        },
+        style: {
+          background: "#1a1612",
+          color: "#fbf6ec",
+          border: 0,
+          padding: "10px 20px",
+          borderRadius: 999,
+          cursor: "pointer"
+        }
+      }, "Reload"));
+    }
+    return this.props.children;
+  }
+}
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(/*#__PURE__*/React.createElement(App, null));
+root.render(/*#__PURE__*/React.createElement(ErrorBoundary, null, /*#__PURE__*/React.createElement(App, null)));
 </script>
   </body>
 </html>
