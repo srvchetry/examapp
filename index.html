@@ -1,0 +1,2156 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Atrium · Practice Examinations</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='20' font-size='20'%3E📓%3C/text%3E%3C/svg%3E" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" />
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+    <style>
+      html, body, #root { background: transparent; }
+      #fatal-error { position: fixed; inset: 0; z-index: 9999; padding: 24px;
+        background: #fbf6ec; color: #1a1612; font-family: ui-monospace, Menlo, monospace;
+        font-size: 13px; line-height: 1.5; overflow: auto; display: none; }
+      #fatal-error.show { display: block; }
+      #fatal-error h2 { font-family: Georgia, serif; font-size: 22px; margin-bottom: 12px; color: #7c2d29; }
+      #fatal-error pre { white-space: pre-wrap; word-break: break-word;
+        background: #f0e8d6; padding: 12px; border-radius: 8px; margin: 8px 0; }
+      #fatal-error button { background: #1a1612; color: #fbf6ec; border: 0;
+        padding: 10px 20px; border-radius: 999px; font-size: 12px; letter-spacing: 0.1em;
+        text-transform: uppercase; cursor: pointer; margin-top: 12px; }
+    </style>
+    <script>
+      // Catch any JS errors before / during React boot and surface them on screen.
+      (function () {
+        function show(msg) {
+          var box = document.getElementById("fatal-error");
+          if (!box) return;
+          var pre = document.getElementById("fatal-error-msg");
+          pre.textContent = (pre.textContent ? pre.textContent + "\n\n" : "") + msg;
+          box.classList.add("show");
+        }
+        window.__SHOW_FATAL = show;
+        window.addEventListener("error", function (e) {
+          show("Error: " + (e.message || e.error?.message || "(unknown)") +
+               (e.filename ? "\nFile: " + e.filename + ":" + e.lineno + ":" + e.colno : ""));
+        });
+        window.addEventListener("unhandledrejection", function (e) {
+          show("Unhandled promise rejection: " + (e.reason?.message || e.reason || "(unknown)"));
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <div id="boot-fallback" style="font-family: Georgia, serif; padding: 48px 24px; max-width: 560px; margin: 0 auto; text-align: center; color: #1a1612;">
+        <div style="font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.5;">Loading</div>
+        <div style="font-size: 28px; margin-top: 12px;">Atrium is booting…</div>
+        <div style="font-size: 13px; margin-top: 16px; opacity: 0.6; font-family: ui-monospace, Menlo, monospace;">
+          If this message persists for more than 10 seconds, something failed to load.
+          <br />Check that your network can reach unpkg.com, jsdelivr.net, and tailwindcss.com.
+        </div>
+      </div>
+    </div>
+    <div id="fatal-error">
+      <h2>Atrium failed to start</h2>
+      <pre id="fatal-error-msg"></pre>
+      <button onclick="document.getElementById('fatal-error').classList.remove('show')">Dismiss</button>
+    </div>
+    <script>
+      // If React hasn't replaced the boot fallback after 10 seconds, surface the issue.
+      setTimeout(function () {
+        if (document.getElementById("boot-fallback")) {
+          window.__SHOW_FATAL("React did not mount within 10 seconds. " +
+            "Likely a CDN was unreachable or the inlined script threw. " +
+            "Available globals: " +
+            "React=" + (typeof React) + ", " +
+            "ReactDOM=" + (typeof ReactDOM) + ", " +
+            "lucide=" + (typeof lucide) + ", " +
+            "katex=" + (typeof katex) + ".");
+        }
+      }, 10000);
+    </script>
+
+```
+<!--
+  ANTHROPIC API KEY
+  ─────────────────
+  Set your key here OR set window.ANTHROPIC_API_KEY in the browser console
+  OR paste it into the prompt that appears the first time you click "Analyse".
+  The key is stored in localStorage on your machine and never sent anywhere
+  except api.anthropic.com.
+-->
+<script>
+  // Returns the stored key, or null if none. Does NOT prompt — the React UI
+  // handles the prompt flow now via a key-management modal.
+  window.__GET_ANTHROPIC_KEY = function () {
+    const k = window.ANTHROPIC_API_KEY || localStorage.getItem("anthropic_api_key");
+    return k ? k.trim() : null;
+  };
+  window.__SET_ANTHROPIC_KEY = function (k) {
+    if (k && k.trim()) localStorage.setItem("anthropic_api_key", k.trim());
+  };
+  window.__FORGET_ANTHROPIC_KEY = function () {
+    localStorage.removeItem("anthropic_api_key");
+  };
+  window.__MASK_KEY = function (k) {
+    if (!k) return "";
+    if (k.length <= 12) return "•".repeat(k.length);
+    return k.slice(0, 7) + "…" + k.slice(-4);
+  };
+</script>
+
+<script>
+```
+
+“use strict”;
+
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError(“Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.”); }
+function _unsupportedIterableToArray(r, a) { if (r) { if (“string” == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return “Object” === t && r.constructor && (t = r.constructor.name), “Map” === t || “Set” === t ? Array.from(r) : “Arguments” === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : “undefined” != typeof Symbol && r[Symbol.iterator] || r[”@@iterator”]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+const _React = React,
+useState = _React.useState,
+useEffect = _React.useEffect,
+useRef = _React.useRef,
+useCallback = _React.useCallback;
+
+// Lucide icon helper
+const Icon = _ref => {
+let name = _ref.name,
+_ref$className = _ref.className,
+className = _ref$className === void 0 ? “h-4 w-4” : _ref$className,
+style = _ref.style;
+const ref = useRef(null);
+useEffect(() => {
+if (ref.current) {
+var _lucide$icons$name;
+ref.current.innerHTML = “”;
+const svg = (_lucide$icons$name = lucide.icons[name]) === null || _lucide$icons$name === void 0 ? void 0 : _lucide$icons$name.toSvg({
+“stroke-width”: 1.75
+});
+if (svg) ref.current.innerHTML = svg;
+}
+}, [name]);
+return /*#**PURE***/React.createElement(“span”, {
+ref: ref,
+className: className,
+style: style
+});
+};
+
+// ─── Math text renderer (KaTeX) ─────────────────────────────────────
+// Critical: KaTeX mutates DOM by replacing text nodes with rendered spans.
+// If React tries to reconcile that mutated DOM on re-render, it can
+// corrupt content, show stale text from previous questions, or crash
+// during navigation. To avoid that, we render KaTeX into a DETACHED div,
+// grab its innerHTML, and feed it into React via dangerouslySetInnerHTML.
+// React then owns a single opaque HTML string and never fights with KaTeX.
+
+const HTML_ESCAPE = {
+“&”: “&”,
+“<”: “<”,
+“>”: “>”,
+‘”’: “"”,
+“’”: “'”
+};
+const escapeHtml = s => String(s).replace(/[&<>”’]/g, c => HTML_ESCAPE[c]);
+const CURRENCY_PLACEHOLDER = “\uE000”; // private-use area, won’t appear in normal text
+
+// Convert text containing $…$, $$…$$, currency $X.XX into safe HTML.
+// Returns an HTML string. Falls back to plain (escaped) text if KaTeX
+// hasn’t loaded yet.
+const renderMathToHTML = text => {
+if (typeof text !== “string”) return escapeHtml(text == null ? “” : String(text));
+// Step 1: protect currency $ by swapping to a placeholder
+let protectedText = “”;
+let i = 0;
+while (i < text.length) {
+const ch = text[i];
+if (ch === “$”) {
+let j = i + 1;
+while (j < text.length && text[j] === “ “) j++;
+if (j < text.length && /[0-9]/.test(text[j])) {
+// Currency: replace this $ with placeholder
+protectedText += CURRENCY_PLACEHOLDER;
+i++;
+continue;
+}
+}
+protectedText += ch;
+i++;
+}
+
+// Step 2: render math via KaTeX into a detached div
+if (window.renderMathInElement) {
+try {
+const sandbox = document.createElement(“div”);
+// Escape HTML in the text so user content can’t inject markup,
+// but keep KaTeX delimiters intact.
+sandbox.innerHTML = escapeHtml(protectedText);
+window.renderMathInElement(sandbox, {
+delimiters: [{
+left: “$$”,
+right: “$$”,
+display: true
+}, {
+left: “$”,
+right: “$”,
+display: false
+}, {
+left: “\(”,
+right: “\)”,
+display: false
+}, {
+left: “\[”,
+right: “\]”,
+display: true
+}],
+throwOnError: false,
+errorColor: “#7c2d29”,
+ignoredTags: [“script”, “noscript”, “style”, “textarea”, “pre”, “code”]
+});
+// Step 3: restore currency $ from placeholders
+return sandbox.innerHTML.split(CURRENCY_PLACEHOLDER).join(”$”);
+} catch (e) {
+console.warn(“KaTeX render failed, falling back to plain:”, e);
+}
+}
+// KaTeX not loaded or threw — escape and restore currency
+return escapeHtml(protectedText).split(CURRENCY_PLACEHOLDER).join(”$”);
+};
+const MathText = _ref2 => {
+let children = _ref2.children,
+className = _ref2.className,
+style = _ref2.style,
+_ref2$as = _ref2.as,
+as = _ref2$as === void 0 ? “div” : _ref2$as;
+const _useState = useState(() => typeof children === “string” ? renderMathToHTML(children) : “”),
+_useState2 = _slicedToArray(_useState, 2),
+html = _useState2[0],
+setHtml = _useState2[1];
+const passthrough = typeof children !== “string”;
+useEffect(() => {
+if (passthrough) return;
+// Render synchronously if KaTeX is ready; otherwise poll briefly.
+let cancelled = false;
+let attempts = 0;
+const tryRender = () => {
+if (cancelled) return;
+if (window.renderMathInElement) {
+setHtml(renderMathToHTML(children));
+} else if (attempts < 40) {
+attempts += 1;
+setTimeout(tryRender, 100);
+} else {
+setHtml(renderMathToHTML(children)); // commit plain-text fallback
+}
+};
+tryRender();
+return () => {
+cancelled = true;
+};
+}, [children, passthrough]);
+const Tag = as;
+if (passthrough) {
+return /*#**PURE***/React.createElement(Tag, {
+className: className,
+style: style
+}, children);
+}
+return /*#**PURE***/React.createElement(Tag, {
+className: className,
+style: style,
+dangerouslySetInnerHTML: {
+__html: html
+}
+});
+};
+
+// ─── Helpers ────────────────────────────────────────────────────────
+const fileToBase64 = file => new Promise((resolve, reject) => {
+const r = new FileReader();
+r.onload = () => resolve(r.result.split(”,”)[1]);
+r.onerror = () => reject(new Error(“Failed to read file”));
+r.readAsDataURL(file);
+});
+const fileToText = file => new Promise((resolve, reject) => {
+const r = new FileReader();
+r.onload = () => resolve(r.result);
+r.onerror = () => reject(new Error(“Failed to read file”));
+r.readAsText(file);
+});
+const formatTime = s => {
+if (s < 0) s = 0;
+const h = Math.floor(s / 3600);
+const m = Math.floor(s % 3600 / 60);
+const sec = s % 60;
+if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+};
+const stripCodeFences = txt => {
+if (!txt) return “”;
+// Use RegExp constructor to avoid potential parser quirks with regex
+// literals containing backticks (some iOS Safari versions misparse them).
+return txt.replace(new RegExp(”^`(?:json)?\\s*", "i"), "").replace(new RegExp("`\s*$”, “i”), “”).trim();
+};
+// ─── Duplicate detection ────────────────────────────────────────────
+// Normalize question text for comparison: lowercase, replace currency,
+// numbers, and math operators with stable tokens; drop stop-words and
+// common first names (which are “narrative variables”); compare via
+// Jaccard similarity over word tokens.
+const STOP_WORDS = new Set([“a”, “an”, “the”, “is”, “are”, “was”, “were”, “be”, “been”, “being”, “have”, “has”, “had”, “do”, “does”, “did”, “and”, “or”, “but”, “if”, “to”, “of”, “in”, “on”, “at”, “by”, “for”, “with”, “from”, “as”, “she”, “he”, “it”, “they”, “them”, “his”, “her”, “their”, “its”, “this”, “that”, “these”, “those”, “what”, “which”, “who”, “how”, “much”, “many”, “left”, “remaining”, “remain”, “remains”]);
+const COMMON_NAMES = new Set([“jenny”, “tom”, “alice”, “bob”, “carol”, “dave”, “eve”, “frank”, “grace”, “john”, “mary”, “peter”, “paul”, “sarah”, “mike”, “emma”, “lily”, “jake”, “anna”, “ben”, “chris”, “dan”, “ellie”, “fred”, “gina”, “henry”, “jane”, “kate”, “leo”, “mia”, “nick”, “olivia”, “pete”, “quinn”, “rachel”, “sam”, “tina”, “uma”, “victor”, “wendy”, “xander”, “yara”, “zoe”]);
+const SCAFFOLD_TOKENS = new Set([”#”, “$#”, “plus”, “minus”, “times”, “divided”, “equals”, “math”, “what”, “how”, “which”, “find”, “solve”, “calculate”, “evaluate”, “if”, “then”, “for”, “of”, “in”, “with”, “is”, “are”]);
+const normalizeForDedup = text => {
+if (!text) return “”;
+let t = text.toLowerCase();
+// Real LaTeX math (has backslash or math operators inside the $…$)
+t = t.replace(/$$([\s\S]*?)$$/g, “ MATH “);
+t = t.replace(/$([^$\n]{1,60})$/g, (m, inner) => {
+if (/[\^_=<>]|\frac|\sqrt|\int|\sum/.test(inner)) return “ MATH “;
+return m;
+});
+t = t.replace(/\(([\s\S]*?)\)/g, “ MATH “);
+t = t.replace(/\[([\s\S]*?)\]/g, “ MATH “);
+// Currency
+t = t.replace(/$\s*\d+(?:.\d+)?/g, “ $# “);
+// Bare numbers
+t = t.replace(/\b\d+(?:.\d+)?\b/g, “#”);
+// Operators as named tokens
+t = t.replace(/+/g, “ plus “).replace(/×|*/g, “ times “).replace(/÷|//g, “ divided “).replace(/=/g, “ equals “).replace(/-/g, “ minus “);
+// Drop punctuation
+t = t.replace(/[^a-z#$\s]/g, “ “).replace(/\s+/g, “ “).trim();
+// Drop stop-words and names
+return t.split(” “).filter(w => w.length > 0 && !STOP_WORDS.has(w) && !COMMON_NAMES.has(w)).join(” “);
+};
+const templateShape = normalizedText => {
+return normalizedText.split(” “).filter(w => SCAFFOLD_TOKENS.has(w)).join(” “);
+};
+const jaccardSimilarity = (a, b) => {
+const sa = new Set(a.split(” “).filter(Boolean));
+const sb = new Set(b.split(” “).filter(Boolean));
+if (sa.size === 0 && sb.size === 0) return 1;
+let intersect = 0;
+sa.forEach(t => {
+if (sb.has(t)) intersect++;
+});
+const union = sa.size + sb.size - intersect;
+return union === 0 ? 0 : intersect / union;
+};
+const isDuplicateQuestion = (q, pool) => {
+const targetNorm = normalizeForDedup(q.text);
+if (!targetNorm) return false;
+const targetShape = templateShape(targetNorm);
+for (const other of pool) {
+const candNorm = normalizeForDedup(other.text);
+if (!candNorm) continue;
+if (candNorm === targetNorm) return true;
+if (jaccardSimilarity(candNorm, targetNorm) >= 0.6) return true;
+const candShape = templateShape(candNorm);
+const tsTokens = targetShape.split(” “).filter(Boolean);
+const csTokens = candShape.split(” “).filter(Boolean);
+if (tsTokens.length >= 3 && csTokens.length >= 3 && jaccardSimilarity(candShape, targetShape) >= 0.9 && jaccardSimilarity(candNorm, targetNorm) >= 0.45) {
+return true;
+}
+}
+return false;
+};
+
+// Normalize a question for duplicate comparison:
+// (legacy alias kept for any callers — same function)
+const _normalizeForDedup_LEGACY = normalizeForDedup;
+
+// Repair single-backslash LaTeX in JSON before parsing. The model often
+// emits {“text”: “45 \times 24”} where \times is a LaTeX command but JSON
+// would parse \t as a tab character (yielding “45[tab]imes 24”). We walk
+// the JSON string and double any backslash followed by a letter that
+// makes a LaTeX command.
+const repairJSONLatex = jsonStr => {
+let out = “”;
+let i = 0;
+let inStr = false;
+while (i < jsonStr.length) {
+const ch = jsonStr[i];
+if (!inStr) {
+if (ch === ‘”’) inStr = true;
+out += ch;
+i++;
+continue;
+}
+if (ch === ‘”’) {
+inStr = false;
+out += ch;
+i++;
+continue;
+}
+if (ch !== “\”) {
+out += ch;
+i++;
+continue;
+}
+const next = jsonStr[i + 1];
+if (next === undefined) {
+out += ch;
+i++;
+continue;
+}
+// Genuine escaped backslash
+if (next === “\”) {
+out += “\\”;
+i += 2;
+continue;
+}
+// Genuine " / \uXXXX
+if (next === ‘”’ || next === “/” || next === “u”) {
+out += “\” + next;
+i += 2;
+continue;
+}
+// \n \t \r \b \f followed by a letter → almost certainly LaTeX
+if (“ntrbf”.includes(next)) {
+const after = jsonStr[i + 2];
+if (after && /[a-zA-Z]/.test(after)) {
+out += “\\” + next;
+i += 2;
+continue;
+}
+out += “\” + next;
+i += 2;
+continue;
+}
+// Any other letter → LaTeX command
+if (/[a-zA-Z]/.test(next)) {
+out += “\\” + next;
+i += 2;
+continue;
+}
+out += “\” + next;
+i += 2;
+}
+return out;
+};
+const extractJSON = txt => {
+const cleanedRaw = stripCodeFences(txt);
+const cleaned = repairJSONLatex(cleanedRaw);
+// Try direct parse
+try {
+return JSON.parse(cleaned);
+} catch {}
+// Find first { or [ and try to parse from there
+const startObj = cleaned.indexOf(”{”);
+const startArr = cleaned.indexOf(”[”);
+let start = -1;
+if (startObj === -1) start = startArr;else if (startArr === -1) start = startObj;else start = Math.min(startObj, startArr);
+if (start === -1) throw new Error(“No JSON found in response”);
+const candidate = cleaned.slice(start);
+// Try progressively shrinking from the end (works for objects)
+for (let end = candidate.length; end > 0; end–) {
+try {
+return JSON.parse(candidate.slice(0, end));
+} catch {}
+}
+// Salvage path for truncated `{ "questions": [ {...}, {...}, {... // Find the questions array, walk forward keeping only complete top-level objects. const arrayMatch = candidate.match(/"questions"\s*:\s*\[/); if (arrayMatch) { const arrayStart = arrayMatch.index + arrayMatch[0].length; const items = []; let i = arrayStart; while (i < candidate.length) { // skip whitespace and commas while (i < candidate.length && /[\s,]/.test(candidate[i])) i++; if (candidate[i] !== "{") break; // walk to matching close brace, respecting strings and escapes let depth = 0; let inStr = false; let escape = false; const objStart = i; for (; i < candidate.length; i++) { const ch = candidate[i]; if (escape) { escape = false; continue; } if (ch === "\\") { escape = true; continue; } if (ch === '"') { inStr = !inStr; continue; } if (inStr) continue; if (ch === "{") depth++;else if (ch === "}") { depth--; if (depth === 0) { const objStr = candidate.slice(objStart, i + 1); try { items.push(JSON.parse(objStr)); } catch {/* skip malformed */} i++; break; } } } if (depth !== 0) break; // truncated mid-object — stop here } if (items.length > 0) return { questions: items }; } throw new Error("Could not parse JSON from model response"); }; const collectText = data => ((data === null || data === void 0 ? void 0 : data.content) || []).filter(b => b.type === "text").map(b => b.text).join("\n"); async function callClaude(_ref3) { let messages = _ref3.messages, system = _ref3.system, tools = _ref3.tools, _ref3$max_tokens = _ref3.max_tokens, max_tokens = _ref3$max_tokens === void 0 ? 4096 : _ref3$max_tokens; const apiKey = window.__GET_ANTHROPIC_KEY(); if (!apiKey) throw new Error("NO_API_KEY"); const model = localStorage.getItem("anthropic_model") || "claude-sonnet-4-6"; const body = { model, max_tokens, messages }; if (system) body.system = system; if (tools) body.tools = tools; const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify(body) }); if (!res.ok) { const t = await res.text(); throw new Error(`API ${res.status}: ${t.slice(0, 250)}`);
+}
+return res.json();
+}
+
+// ─── Answer-key verification ────────────────────────────────────────
+// Sends each question back to the model with explicit instructions to
+// re-solve and report the correct answer. Patches mismatches and drops
+// questions that can’t be reliably verified.
+async function verifyAnswerKeys(questions, log) {
+const BATCH = 8;
+const verified = [];
+const needsRegen = []; // questions whose answer key doesn’t match any option
+for (let start = 0; start < questions.length; start += BATCH) {
+const batch = questions.slice(start, start + BATCH);
+log(`Verifying questions ${start + 1}-${Math.min(start + BATCH, questions.length)}…`);
+
+```
+// Strip answer keys before sending so the model solves freshly.
+const stripped = batch.map((q, i) => ({
+  id: i,
+  type: q.type,
+  text: q.text,
+  options: q.type === "mcq" ? q.options : undefined
+}));
+const sys = `You are a meticulous answer key checker. For each question below, solve it carefully step by step and report the correct answer.
+```
+
+For MCQ: First solve the question independently. Then look at the options and find which one matches your solved answer.
+
+- Report “solved_answer” as your independently-solved result (a short string, e.g. “42” or “x = 3”).
+- Report “correct_index” as the 0-based index of the option that matches your solved answer (0=A, 1=B, etc.). The valid range depends on how many options the question has — do NOT make up an index outside that range.
+- If NO option matches your solved answer, set “correct_index” to -1 and explain why in “explanation”. Do NOT pick the closest wrong option.
+
+For numeric: report the exact numeric value as a string.
+
+Return EXACTLY this JSON (no commentary, no markdown):
+{
+“answers”: [
+{ “id”: 0, “type”: “mcq”, “solved_answer”: “42”, “correct_index”: 2, “explanation”: “1-3 sentence rigorous solution.”, “confidence”: “high” | “medium” | “low” },
+{ “id”: 1, “type”: “numeric”, “correct_value”: “42.5”, “explanation”: “…”, “confidence”: “high” }
+]
+}
+
+Set confidence to “low” if the question is ambiguous, has multiple valid answers, or you cannot solve it confidently. Set “medium” if there is some uncertainty. Otherwise “high”.`; let parsed; try { const resp = await callClaude({ system: sys, messages: [{ role: "user", content: [{ type: "text", text: JSON.stringify(stripped, null, 2) }] }], max_tokens: 4000 }); const txt = collectText(resp); parsed = extractJSON(txt); } catch (e) { console.warn("Verification batch failed, keeping originals:", e); verified.push(...batch); continue; } const answers = parsed && parsed.answers || []; batch.forEach((orig, i) => { const v = answers.find(a => a && a.id === i); if (!v) { // No verification result — keep original but flag uncertainty verified.push(orig); return; } if (v.confidence === "low") { // Drop ambiguous questions entirely console.warn(`Dropping low-confidence question: ${orig.text.slice(0, 80)}`); return; } if (orig.type === "mcq") { const numOpts = orig.options.length; // Mismatch detection: verifier says no option matches its solved answer if (typeof v.correct_index === "number" && (v.correct_index < 0 || v.correct_index >= numOpts)) { console.warn(`Question has no matching option — marking for regeneration: ${orig.text.slice(0, 80)}`);
+needsRegen.push({
+originalText: orig.text,
+subject: orig.subject,
+type: orig.type,
+verifierSolvedAnswer: v.solved_answer
+});
+return;
+}
+// Patch with the verified index (bounded by actual option count)
+const patched = {
+…orig
+};
+if (typeof v.correct_index === “number” && v.correct_index >= 0 && v.correct_index < numOpts) {
+patched.correct_index = v.correct_index;
+}
+if (v.explanation) patched.explanation = v.explanation;
+verified.push(patched);
+} else if (orig.type === “numeric”) {
+const patched = {
+…orig
+};
+if (v.correct_value != null) {
+patched.correct_value = String(v.correct_value);
+}
+if (v.explanation) patched.explanation = v.explanation;
+verified.push(patched);
+} else {
+verified.push(orig);
+}
+});
+}
+if (verified.length === 0 && needsRegen.length === 0) {
+// Verification failed catastrophically — fall back to originals.
+return {
+verified: questions,
+needsRegen: []
+};
+}
+return {
+verified,
+needsRegen
+};
+}
+
+// ─── Local persistence for percentile cohort ────────────────────────
+const scoresKey = examType => `atrium:scores:${(examType || "generic").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 80)}`;
+const getHistory = examType => {
+try {
+return JSON.parse(localStorage.getItem(scoresKey(examType)) || “[]”);
+} catch {
+return [];
+}
+};
+const saveScore = (examType, percentage) => {
+const list = getHistory(examType);
+list.push({
+percentage,
+ts: Date.now()
+});
+const trimmed = list.slice(-500);
+localStorage.setItem(scoresKey(examType), JSON.stringify(trimmed));
+return trimmed;
+};
+const computePercentile = (history, score) => {
+if (!(history !== null && history !== void 0 && history.length)) return null;
+const below = history.filter(h => h.percentage < score).length;
+return Math.round(below / history.length * 100);
+};
+
+// ─── Decorative grain ───────────────────────────────────────────────
+const PaperGrain = () => /*#**PURE***/React.createElement(“svg”, {
+className: “pointer-events-none fixed inset-0 h-full w-full opacity-[0.04] mix-blend-multiply”,
+“aria-hidden”: “true”
+}, /*#**PURE***/React.createElement(“filter”, {
+id: “grain”
+}, /*#**PURE***/React.createElement(“feTurbulence”, {
+type: “fractalNoise”,
+baseFrequency: “0.85”,
+numOctaves: “2”,
+seed: “3”
+}), /*#**PURE***/React.createElement(“feColorMatrix”, {
+values: “0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0”
+})), /*#**PURE***/React.createElement(“rect”, {
+width: “100%”,
+height: “100%”,
+filter: “url(#grain)”
+}));
+
+// ─── App ────────────────────────────────────────────────────────────
+function App() {
+const _useState3 = useState(“upload”),
+_useState4 = _slicedToArray(_useState3, 2),
+screen = _useState4[0],
+setScreen = _useState4[1];
+const _useState5 = useState([]),
+_useState6 = _slicedToArray(_useState5, 2),
+files = _useState6[0],
+setFiles = _useState6[1];
+const _useState7 = useState(””),
+_useState8 = _slicedToArray(_useState7, 2),
+testName = _useState8[0],
+setTestName = _useState8[1];
+const _useState9 = useState(null),
+_useState0 = _slicedToArray(_useState9, 2),
+examInfo = _useState0[0],
+setExamInfo = _useState0[1];
+const _useState1 = useState([]),
+_useState10 = _slicedToArray(_useState1, 2),
+questions = _useState10[0],
+setQuestions = _useState10[1];
+const _useState11 = useState({}),
+_useState12 = _slicedToArray(_useState11, 2),
+answers = _useState12[0],
+setAnswers = _useState12[1];
+const _useState13 = useState({}),
+_useState14 = _slicedToArray(_useState13, 2),
+marked = _useState14[0],
+setMarked = _useState14[1];
+const _useState15 = useState(0),
+_useState16 = _slicedToArray(_useState15, 2),
+currentQ = _useState16[0],
+setCurrentQ = _useState16[1];
+const _useState17 = useState(0),
+_useState18 = _slicedToArray(_useState17, 2),
+timeLeft = _useState18[0],
+setTimeLeft = _useState18[1];
+const _useState19 = useState(false),
+_useState20 = _slicedToArray(_useState19, 2),
+examStarted = _useState20[0],
+setExamStarted = _useState20[1];
+const _useState21 = useState([]),
+_useState22 = _slicedToArray(_useState21, 2),
+analysisLog = _useState22[0],
+setAnalysisLog = _useState22[1];
+const _useState23 = useState(null),
+_useState24 = _slicedToArray(_useState23, 2),
+scoreData = _useState24[0],
+setScoreData = _useState24[1];
+const _useState25 = useState(null),
+_useState26 = _slicedToArray(_useState25, 2),
+error = _useState26[0],
+setError = _useState26[1];
+const _useState27 = useState(false),
+_useState28 = _slicedToArray(_useState27, 2),
+showFinishConfirm = _useState28[0],
+setShowFinishConfirm = _useState28[1];
+const _useState29 = useState(false),
+_useState30 = _slicedToArray(_useState29, 2),
+showKeyModal = _useState30[0],
+setShowKeyModal = *useState30[1];
+const timerRef = useRef(null);
+const dragRef = useRef(null);
+const handleSubmitRef = useRef(null);
+useEffect(() => {
+if (screen === “exam” && examStarted && timeLeft > 0) {
+timerRef.current = setInterval(() => {
+setTimeLeft(t => {
+if (t <= 1) {
+clearInterval(timerRef.current);
+// Use the ref so we always call the latest handleSubmit with current state
+if (handleSubmitRef.current) handleSubmitRef.current(true);
+return 0;
+}
+return t - 1;
+});
+}, 1000);
+return () => clearInterval(timerRef.current);
+}
+}, [screen, examStarted]);
+const onFiles = fileList => {
+const arr = Array.from(fileList || []);
+const valid = arr.filter(f => {
+const ok = f.type === “application/pdf” || f.type.startsWith(“image/”) || f.type === “text/plain” || f.name.toLowerCase().endsWith(”.txt”) || f.name.toLowerCase().endsWith(”.md”);
+return ok && f.size < 30 * 1024 * 1024;
+});
+setFiles(prev => […prev, …valid]);
+};
+const removeFile = idx => setFiles(prev => prev.filter((*, i) => i !== idx));
+const onDrop = e => {
+var _dragRef$current;
+e.preventDefault();
+(_dragRef$current = dragRef.current) === null || _dragRef$current === void 0 || _dragRef$current.classList.remove(“ring-2”);
+onFiles(e.dataTransfer.files);
+};
+const onDragOver = e => {
+var _dragRef$current2;
+e.preventDefault();
+(_dragRef$current2 = dragRef.current) === null || _dragRef$current2 === void 0 || _dragRef$current2.classList.add(“ring-2”);
+};
+const onDragLeave = e => {
+var _dragRef$current3;
+e.preventDefault();
+(_dragRef$current3 = dragRef.current) === null || _dragRef$current3 === void 0 || _dragRef$current3.classList.remove(“ring-2”);
+};
+const log = msg => setAnalysisLog(prev => […prev, msg]);
+const analyzeExam = async () => {
+setError(null);
+setAnalysisLog([]);
+setScreen(“analyzing”);
+try {
+log(“Reading uploaded papers…”);
+const fileBlocks = [];
+for (const f of files) {
+if (f.type === “application/pdf”) {
+const data = await fileToBase64(f);
+fileBlocks.push({
+type: “document”,
+source: {
+type: “base64”,
+media_type: “application/pdf”,
+data
+}
+});
+} else if (f.type.startsWith(“image/”)) {
+const data = await fileToBase64(f);
+fileBlocks.push({
+type: “image”,
+source: {
+type: “base64”,
+media_type: f.type,
+data
+}
+});
+} else {
+const txt = await fileToText(f);
+fileBlocks.push({
+type: “text”,
+text: `[File: ${f.name}]\n${txt.slice(0, 50000)}`
+});
+}
+}
+log(“Identifying the exam and looking up its standards on the web…”);
+const analysisSystem = `You are an expert academic exam analyst. You will receive sample exam papers and a user-provided test name.
+
+Your job:
+
+1. Identify what exam this is (e.g., SAT, JEE Main, UPSC Prelims, GRE Quant, IGCSE Maths, AMC 10, Thales Contest).
+1. Use web_search to confirm the OFFICIAL standard format: total duration, number of questions, question types, marking scheme, medal/grade thresholds.
+1. Determine subjects and difficulty profile.
+1. Count how many answer options each MCQ has by looking at the sample paper (some exams use 4 options A-D; others like AMC and Thales use 5 options A-E). This is critical.
+
+Return EXACTLY this JSON (no commentary, no markdown fences):
+{
+“exam_name”: “Full official name”,
+“exam_short”: “short slug”,
+“subjects”: [”…”],
+“duration_minutes”: <int>,
+“num_questions”: <int>,
+“num_options”: 4 or 5,
+“question_format”: “MCQ” | “MCQ+Numeric” | “Mixed”,
+“marking_scheme”: “human-readable”,
+“negative_marking”: <number>,
+“difficulty”: “easy” | “medium” | “hard” | “very hard”,
+“medals”: { “gold_pct”: <int>, “silver_pct”: <int>, “bronze_pct”: <int> },
+“rationale”: “2-3 sentences explaining the identification and noting the option count you observed.”
+}
+
+If no medal system, use defaults gold=90, silver=75, bronze=60.
+If you genuinely cannot tell the option count from the sample, default num_options to 4.`; const userContent = [...fileBlocks, { type: "text", text: `User-provided test name: “${testName || “(not provided)”}”\n\nAnalyze and produce the JSON.` }]; const analysis = await callClaude({ system: analysisSystem, messages: [{ role: "user", content: userContent }], tools: [{ type: "web_search_20250305", name: "web_search" }], max_tokens: 3500 }); const analysisText = collectText(analysis); let info; try { info = extractJSON(analysisText); } catch { throw new Error("Could not parse exam analysis: " + analysisText.slice(0, 250)); } log(`Identified: ${info.exam_name}`); log(`Standard: ${info.duration_minutes} minutes, ${info.num_questions} questions`); const cappedNumQ = Math.min(info.num_questions || 20, 60); info.num_questions = cappedNumQ; // Default and clamp num_options. Only 4 and 5 are supported by the UI. if (info.num_options !== 4 && info.num_options !== 5) { info.num_options = 4; } log(`Format: ${info.num_options}-option MCQ.`); log("Generating practice questions at matched difficulty…"); const numOptions = info.num_options || 4; const optionLetters = numOptions === 5 ? "A-E" : "A-D"; const exampleOptions = numOptions === 5 ? '["A", "B", "C", "D", "E"]' : '["A", "B", "C", "D"]'; const genSystem = `You are an expert exam question writer. Generate exactly N fresh ORIGINAL practice questions matching the difficulty, subjects, and format of the sample provided. The exact count N will be specified in the user message.
+
+CRITICAL DISCIPLINE FOR CORRECTNESS:
+For EACH question, follow this process before writing it:
+
+1. Decide the question and write it.
+1. Solve it yourself, step by step, in the “explanation” field. Be rigorous. Do not skip steps.
+1. The final value/result of your worked solution is the correct answer.
+1. For MCQ: write EXACTLY ${numOptions} options (labelled ${optionLetters}) where exactly one matches your worked solution. Set correct_index to the 0-based index of THAT option (0 to ${numOptions - 1}). Double-check by re-reading: “the worked solution gives X; option [correct_index] is X; other options are not X.”
+1. For numeric: set correct_value to the exact numeric result of your worked solution.
+
+SCHEMA RULES:
+
+- For MCQ questions: include “options” (array of EXACTLY ${numOptions} strings) and “correct_index” (integer 0 to ${numOptions - 1}). Do NOT include “correct_value” or “tolerance” fields.
+- For numeric questions: include “correct_value” (string) and “tolerance” (number). Do NOT include “options” or “correct_index” fields.
+- Keep explanations concise: 2-4 sentences maximum. Be rigorous but brief.
+
+FORMATTING RULES FOR MATH AND CURRENCY:
+
+- Wrap inline math in single dollar signs: $x^2 + 1$, $\frac{a}{b}$.
+- Wrap display math in double dollar signs: $$\int_0^1 x\,dx$$.
+- Use standard LaTeX commands. KaTeX will render the output.
+- For currency amounts (US dollars, prices, money), write as plain text WITHOUT LaTeX wrapping. Example: “Jenny has 5 dollars” or “Jenny has $5.00” — but if you write the dollar sign, the rest of the sentence MUST NOT contain another loose dollar sign, or KaTeX will treat the text between them as math. Prefer writing “5 dollars” or “USD 5.00” to avoid ambiguity.
+- For simple integers and negatives in plain English (“the temperature was -3 degrees”), do NOT wrap in $…$ — write them as plain text.
+- Never use $…$ around non-mathematical content.
+
+Return EXACTLY this JSON (no commentary, no markdown fences):
+{
+“questions”: [
+{
+“id”: 1,
+“subject”: “string”,
+“type”: “mcq”,
+“text”: “Question text. Use simple LaTeX in $…$ for math.”,
+“options”: ${exampleOptions},
+“correct_index”: 0,
+“marks”: 1,
+“explanation”: “Brief rigorous solution.”
+}
+]
+}
+
+Numeric question example:
+{
+“id”: 2,
+“subject”: “string”,
+“type”: “numeric”,
+“text”: “…”,
+“correct_value”: “42.5”,
+“tolerance”: 0.01,
+“marks”: 1,
+“explanation”: “…”
+}`;
+
+```
+  // Generate in batches of 10 to stay well under token limits.
+  // Each batch gets its own API call; we accumulate results.
+  // Each subsequent batch is told what's already been generated so it
+  // can avoid repeating concepts and surface forms.
+  const BATCH_SIZE = 10;
+  const allQuestions = [];
+  const numBatches = Math.ceil(cappedNumQ / BATCH_SIZE);
+  const subjects = info.subjects || [];
+
+  // Topic-rotation seeds — different concept buckets for each batch.
+  // Scaled to the exam's difficulty so we don't push elementary exams
+  // toward adult-level "harder variants".
+  const rotationHints = (() => {
+    const d = (info.difficulty || "medium").toLowerCase();
+    if (d.startsWith("easy") || d.includes("elementary")) {
+      return ["Focus on direct application of single concepts.", "Focus on careful reading and avoiding common mistakes.", "Focus on visual reasoning, counting, and pattern recognition.", "Focus on word problems with relatable everyday scenarios.", "Focus on multi-step but mechanically simple problems.", "Focus on questions that test understanding of vocabulary and definitions."];
+    }
+    if (d.startsWith("hard") || d.startsWith("very")) {
+      return ["Focus on foundational application as a warmup.", "Focus on multi-step problems combining 3+ concepts.", "Focus on non-obvious problem decomposition.", "Focus on edge cases, counter-examples, and proof-style reasoning.", "Focus on questions at the upper end of the difficulty range.", "Focus on questions that require careful interpretation of conditions."];
+    }
+    return ["Focus on foundational/direct application questions.", "Focus on multi-step problems combining 2-3 concepts.", "Focus on word problems and real-world applications.", "Focus on edge cases, tricky cases, or conceptual traps.", "Focus on questions that require careful reading and interpretation.", "Focus on visual or diagrammatic reasoning."];
+  })();
+  for (let b = 0; b < numBatches; b++) {
+    const remaining = cappedNumQ - allQuestions.length;
+    const thisBatch = Math.min(BATCH_SIZE, remaining);
+    if (thisBatch <= 0) break;
+    const startId = allQuestions.length + 1;
+    log(`Generating questions ${startId}-${startId + thisBatch - 1} of ${cappedNumQ}…`);
+
+    // Build a "previously generated" summary to forbid repeats.
+    // Only include question stems (no answers) — keeps the prompt small.
+    const priorSummary = allQuestions.length > 0 ? `\n\nQUESTIONS ALREADY GENERATED (DO NOT REPEAT OR PARAPHRASE THESE):\n${allQuestions.map((q, i) => `${i + 1}. [${q.subject || "?"}] ${q.text.slice(0, 200)}`).join("\n")}\n\nYour new questions must cover DIFFERENT scenarios, DIFFERENT numbers, and where possible DIFFERENT sub-topics from the list above. Do not produce structural near-duplicates (same problem with different numbers).` : "";
+    const subjectSeed = subjects.length > 1 ? ` Vary subjects across this batch — use the subjects: ${subjects.join(", ")}.` : "";
+    const rotation = rotationHints[b % rotationHints.length];
+    const batchUserContent = [...fileBlocks, {
+      type: "text",
+      text: `Exam spec:\n${JSON.stringify(info, null, 2)}\n\nGenerate exactly ${thisBatch} questions now.${subjectSeed}\n\nBatch focus: ${rotation}${priorSummary}\n\nUse IDs starting at ${startId}. Return ONLY the JSON object — no preamble, no markdown fences, nothing else. Begin your response with { and end with }.`
+    }];
+    let qData;
+    try {
+      const gen = await callClaude({
+        system: genSystem,
+        messages: [{
+          role: "user",
+          content: batchUserContent
+        }],
+        max_tokens: 6000
+      });
+      const genText = collectText(gen);
+      qData = extractJSON(genText);
+    } catch (e) {
+      console.warn(`Batch ${b + 1} failed:`, e);
+      log(`Batch ${b + 1} failed (${e.message.slice(0, 80)}); continuing…`);
+      continue;
+    }
+    const batchQs = (qData.questions || []).filter(q => q && q.text && (q.type === "mcq" && Array.isArray(q.options) && q.options.length === numOptions && typeof q.correct_index === "number" && q.correct_index >= 0 && q.correct_index < numOptions || q.type === "numeric" && q.correct_value != null));
+
+    // Client-side dedup safety net — drop any near-duplicate of an
+    // already-accepted question even if the model ignored the instruction.
+    const accepted = [];
+    for (const q of batchQs) {
+      if (!isDuplicateQuestion(q, allQuestions)) {
+        accepted.push(q);
+        allQuestions.push(q);
+      } else {
+        console.warn("Dropped duplicate question:", q.text.slice(0, 80));
+      }
+    }
+    if (accepted.length < batchQs.length) {
+      log(`Filtered ${batchQs.length - accepted.length} duplicate(s) from this batch.`);
+    }
+  }
+  if (allQuestions.length === 0) throw new Error("No valid questions were generated. Try uploading a different sample paper or switching to a more capable model.");
+  log(`Generated ${allQuestions.length} questions. Verifying answer keys…`);
+
+  // Verification pass: re-check each question's correct answer.
+  const _await$verifyAnswerKe = await verifyAnswerKeys(allQuestions, log),
+    verified = _await$verifyAnswerKe.verified,
+    needsRegen = _await$verifyAnswerKe.needsRegen;
+  let finalQuestions = verified;
+
+  // One regeneration round for questions whose answer keys didn't match any option.
+  if (needsRegen.length > 0) {
+    log(`Regenerating ${needsRegen.length} question(s) with mismatched answer keys…`);
+    const regenContext = needsRegen.map((q, i) => `Topic: ${q.subject || "general"}. Issue with prior attempt: solved answer was "${q.verifierSolvedAnswer}" but no option matched. Write a fresh question on a similar topic, ensuring one option exactly matches the solved answer.`).join("\n");
+    const regenUserContent = [...fileBlocks, {
+      type: "text",
+      text: `Exam spec:\n${JSON.stringify(info, null, 2)}\n\nGenerate exactly ${needsRegen.length} fresh questions to replace flawed ones. ${regenContext}\n\nReturn ONLY the JSON object — no preamble. Begin with { and end with }.`
+    }];
+    try {
+      const regenResp = await callClaude({
+        system: genSystem,
+        messages: [{
+          role: "user",
+          content: regenUserContent
+        }],
+        max_tokens: 6000
+      });
+      const regenData = extractJSON(collectText(regenResp));
+      const regenQs = (regenData.questions || []).filter(q => q && q.text && (q.type === "mcq" && Array.isArray(q.options) && q.options.length === numOptions && typeof q.correct_index === "number" && q.correct_index >= 0 && q.correct_index < numOptions || q.type === "numeric" && q.correct_value != null));
+      if (regenQs.length > 0) {
+        log(`Verifying ${regenQs.length} regenerated question(s)…`);
+        const _await$verifyAnswerKe2 = await verifyAnswerKeys(regenQs, log),
+          regenVerified = _await$verifyAnswerKe2.verified;
+        finalQuestions = finalQuestions.concat(regenVerified);
+      }
+    } catch (e) {
+      console.warn("Regeneration round failed:", e);
+      log("Regeneration round failed; proceeding without those questions.");
+    }
+  }
+  if (finalQuestions.length === 0) {
+    throw new Error("No questions survived verification. Try a different sample or model.");
+  }
+  log(`Verification complete (${finalQuestions.length} questions ready).`);
+  setExamInfo(info);
+  setQuestions(finalQuestions);
+  setTimeLeft(info.duration_minutes * 60);
+  setScreen("ready");
+} catch (e) {
+  console.error(e);
+  if (e.message === "NO_API_KEY") {
+    setScreen("upload");
+    setShowKeyModal(true);
+  } else {
+    setError(e.message || "Something went wrong.");
+    setScreen("upload");
+  }
+}
+```
+
+};
+const startExam = () => {
+setExamStarted(true);
+setCurrentQ(0);
+setAnswers({});
+setMarked({});
+setScreen(“exam”);
+};
+const handleSubmit = useCallback(function () {
+let auto = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+clearInterval(timerRef.current);
+setExamStarted(false);
+let total = 0,
+max = 0,
+correctCount = 0;
+const perQ = [];
+questions.forEach((q, i) => {
+const ans = answers[i];
+const marks = q.marks || 1;
+max += marks;
+let isCorrect = false;
+const wasAttempted = ans != null && ans !== “” && ans !== undefined;
+if (wasAttempted) {
+if (q.type === “mcq”) {
+isCorrect = Number(ans) === Number(q.correct_index);
+} else if (q.type === “numeric”) {
+const u = parseFloat(String(ans).trim());
+const c = parseFloat(String(q.correct_value).trim());
+const tol = q.tolerance || 0.01;
+if (!isNaN(u) && !isNaN(c) && Math.abs(u - c) <= tol) isCorrect = true;
+}
+}
+if (isCorrect) {
+total += marks;
+correctCount += 1;
+} else if (wasAttempted && examInfo !== null && examInfo !== void 0 && examInfo.negative_marking) {
+total -= examInfo.negative_marking;
+}
+perQ.push({
+…q,
+userAnswer: ans,
+isCorrect
+});
+});
+const percentage = max > 0 ? Math.max(0, total / max * 100) : 0;
+const examType = (examInfo === null || examInfo === void 0 ? void 0 : examInfo.exam_short) || (examInfo === null || examInfo === void 0 ? void 0 : examInfo.exam_name) || “generic”;
+const history = saveScore(examType, percentage);
+const percentile = computePercentile(history.slice(0, -1), percentage);
+const medalThresholds = (examInfo === null || examInfo === void 0 ? void 0 : examInfo.medals) || {
+gold_pct: 90,
+silver_pct: 75,
+bronze_pct: 60
+};
+let medal = null;
+if (percentage >= medalThresholds.gold_pct) medal = “gold”;else if (percentage >= medalThresholds.silver_pct) medal = “silver”;else if (percentage >= medalThresholds.bronze_pct) medal = “bronze”;
+setScoreData({
+total,
+max,
+percentage,
+correctCount,
+perQ,
+percentile,
+historyCount: history.length,
+medal,
+autoSubmitted: auto
+});
+setScreen(“results”);
+}, [questions, answers, examInfo]);
+
+// Keep the ref in sync so the timer’s setInterval callback always sees the latest version
+useEffect(() => {
+handleSubmitRef.current = handleSubmit;
+}, [handleSubmit]);
+const reset = () => {
+setScreen(“upload”);
+setFiles([]);
+setTestName(””);
+setExamInfo(null);
+setQuestions([]);
+setAnswers({});
+setMarked({});
+setCurrentQ(0);
+setTimeLeft(0);
+setExamStarted(false);
+setAnalysisLog([]);
+setScoreData(null);
+setError(null);
+};
+return /*#**PURE***/React.createElement(“div”, {
+className: “relative min-h-screen w-full overflow-x-hidden”,
+style: {
+background: “radial-gradient(ellipse at top, #f5efe4 0%, #efe7d8 40%, #e8dfcc 100%)”,
+color: “#1a1612”,
+fontFamily: “‘Newsreader’, Georgia, serif”
+}
+}, /*#**PURE***/React.createElement(“style”, null, `@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=DM+Sans:opsz,wght@9..40,300..700&family=JetBrains+Mono:wght@400;500;700&display=swap'); .font-display { font-family: 'Newsreader', Georgia, serif; font-optical-sizing: auto; } .font-body { font-family: 'DM Sans', system-ui, sans-serif; font-optical-sizing: auto; } .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; } .ink { color: #1a1612; } .ink-mute { color: #6b5d4a; } .accent { color: #7c2d29; } .bg-paper { background: linear-gradient(180deg, #fbf6ec 0%, #f7f0e1 100%); } .border-ink { border-color: #1a1612; } .hairline { border-top: 1px solid #1a161220; } @keyframes fadeUp { from { opacity:0; transform: translateY(10px) } to { opacity:1; transform:translateY(0) } } .fade-up { animation: fadeUp 0.5s ease-out both; } .fade-up-1 { animation-delay: 0.05s; } .fade-up-2 { animation-delay: 0.15s; } .fade-up-3 { animation-delay: 0.25s; } @keyframes pulseDot { 0%,100% { opacity:0.4 } 50% { opacity:1 } } .pulse-dot { animation: pulseDot 1.4s ease-in-out infinite; } .pulse-dot-2 { animation-delay: 0.2s; } .pulse-dot-3 { animation-delay: 0.4s; } .btn-primary { background: #1a1612; color: #fbf6ec; transition: all 0.15s ease; } .btn-primary:hover:not(:disabled) { background: #7c2d29; transform: translateY(-1px); } .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; } .btn-ghost { border: 1px solid #1a161240; transition: all 0.2s ease; } .btn-ghost:hover { border-color: #1a1612; background: #1a161208; } .chip { background: #1a161208; border: 1px solid #1a161220; }`), /*#**PURE***/React.createElement(PaperGrain, null), /*#**PURE***/React.createElement(“header”, {
+className: “relative z-10 mx-auto max-w-6xl px-5 pt-8 pb-4 sm:px-8”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “flex items-center justify-between gap-3”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “flex items-center gap-3 min-w-0”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “grid h-10 w-10 shrink-0 place-items-center rounded-full border-ink border bg-paper”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “book-open”,
+className: “h-5 w-5”
+})), /*#**PURE***/React.createElement(“div”, {
+className: “min-w-0”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-2xl leading-none tracking-tight”
+}, “Atrium”), /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.18em] ink-mute truncate”
+}, “Practice Examinations \xB7 Self-Paced”))), screen !== “exam” && /*#**PURE***/React.createElement(“div”, {
+className: “flex items-center gap-1 sm:gap-3 shrink-0”
+}, /*#**PURE***/React.createElement(“button”, {
+onClick: () => setShowKeyModal(true),
+className: “font-body text-sm ink-mute hover:ink flex items-center gap-1.5 rounded-full px-2 sm:px-3 py-1.5”,
+title: “Manage API key”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “key”,
+className: “h-4 w-4”
+}), /*#**PURE***/React.createElement(“span”, {
+className: “hidden sm:inline”
+}, “API Key”)), screen !== “upload” && /*#**PURE***/React.createElement(“button”, {
+className: “font-body text-sm ink-mute hover:ink flex items-center gap-1”,
+onClick: reset
+}, /*#**PURE***/React.createElement(Icon, {
+name: “x”,
+className: “h-4 w-4”
+}), “ “, /*#**PURE***/React.createElement(“span”, {
+className: “hidden sm:inline”
+}, “New Session”)))), /*#**PURE***/React.createElement(“div”, {
+className: “hairline mt-6”
+})), /*#**PURE***/React.createElement(“main”, {
+className: “relative z-10 mx-auto max-w-6xl px-5 pb-24 sm:px-8”
+}, screen === “upload” && /*#**PURE***/React.createElement(UploadView, {
+files,
+onFiles,
+removeFile,
+testName,
+setTestName,
+analyze: analyzeExam,
+error,
+dragRef,
+onDrop,
+onDragOver,
+onDragLeave
+}), screen === “analyzing” && /*#**PURE***/React.createElement(AnalyzingView, {
+log: analysisLog
+}), screen === “ready” && /*#**PURE***/React.createElement(ReadyView, {
+examInfo: examInfo,
+numQ: questions.length,
+startExam: startExam
+}), screen === “exam” && /*#**PURE***/React.createElement(ExamView, {
+examInfo,
+questions,
+answers,
+setAnswers,
+marked,
+setMarked,
+currentQ,
+setCurrentQ,
+timeLeft,
+onFinish: () => setShowFinishConfirm(true)
+}), screen === “results” && scoreData && /*#**PURE***/React.createElement(ResultsView, {
+data: scoreData,
+examInfo: examInfo,
+onRestart: reset
+})), showFinishConfirm && /*#**PURE***/React.createElement(ConfirmModal, {
+title: “Submit your exam?”,
+body: `You have answered ${Object.keys(answers).length} of ${questions.length} questions. Once submitted, you cannot return to the paper.`,
+onCancel: () => setShowFinishConfirm(false),
+onConfirm: () => {
+setShowFinishConfirm(false);
+handleSubmit(false);
+}
+}), showKeyModal && /*#**PURE***/React.createElement(KeyModal, {
+onClose: () => setShowKeyModal(false)
+}));
+}
+function UploadView(_ref4) {
+let files = _ref4.files,
+onFiles = _ref4.onFiles,
+removeFile = _ref4.removeFile,
+testName = _ref4.testName,
+setTestName = _ref4.setTestName,
+analyze = _ref4.analyze,
+error = _ref4.error,
+dragRef = _ref4.dragRef,
+onDrop = _ref4.onDrop,
+onDragOver = _ref4.onDragOver,
+onDragLeave = _ref4.onDragLeave;
+const fileInputRef = useRef(null);
+return /*#**PURE***/React.createElement(“div”, {
+className: “grid gap-10 pt-8 lg:grid-cols-12”
+}, /*#**PURE***/React.createElement(“section”, {
+className: “lg:col-span-7 fade-up”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-4”
+}, “\u25C6 Volume I \xB7 Issue N\xBA 1”), /*#**PURE***/React.createElement(“h1”, {
+className: “font-display text-5xl leading-[1.05] tracking-tight sm:text-6xl”
+}, “Sit a real exam,”, /*#**PURE***/React.createElement(“br”, null), /*#**PURE***/React.createElement(“em”, {
+className: “italic accent”
+}, “on your terms.”)), /*#**PURE***/React.createElement(“p”, {
+className: “font-body ink-mute mt-6 max-w-xl text-base leading-relaxed”
+}, “Upload one or more sample papers. We identify the exam, look up its official standards, generate a fresh paper at matched difficulty, and predict where you would land on the real thing.”), /*#**PURE***/React.createElement(“div”, {
+className: “hairline mt-8”
+}), /*#**PURE***/React.createElement(“ul”, {
+className: “font-body mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-sm”
+}, /*#**PURE***/React.createElement(“li”, {
+className: “flex items-center gap-2”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “search”,
+className: “h-4 w-4 accent”
+}), “ Auto-identifies the exam”), /*#**PURE***/React.createElement(“li”, {
+className: “flex items-center gap-2”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “globe”,
+className: “h-4 w-4 accent”
+}), “ Confirms standards on the web”), /*#**PURE***/React.createElement(“li”, {
+className: “flex items-center gap-2”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “clock”,
+className: “h-4 w-4 accent”
+}), “ Sets official duration”), /*#**PURE***/React.createElement(“li”, {
+className: “flex items-center gap-2”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “trophy”,
+className: “h-4 w-4 accent”
+}), “ Predicts percentile & medals”))), /*#**PURE***/React.createElement(“section”, {
+className: “lg:col-span-5 fade-up fade-up-2”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “bg-paper rounded-2xl border-ink border p-6 sm:p-7”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-4”
+}, “01 \xB7 Begin your session”), /*#**PURE***/React.createElement(“label”, {
+className: “font-body block text-xs uppercase tracking-[0.18em] ink-mute mb-2”
+}, “Test name “, /*#**PURE***/React.createElement(“span”, {
+className: “lowercase tracking-normal”
+}, “(optional)”)), /*#**PURE***/React.createElement(“input”, {
+type: “text”,
+value: testName,
+onChange: e => setTestName(e.target.value),
+placeholder: “e.g. JEE Main, AMC 10, SAT Math\u2026”,
+className: “font-display w-full bg-transparent text-xl outline-none border-b pb-2”,
+style: {
+borderColor: “#1a161250”
+}
+}), /*#**PURE***/React.createElement(“div”, {
+className: “font-body mt-7 mb-2 block text-xs uppercase tracking-[0.18em] ink-mute”
+}, “Sample paper(s)”), /*#**PURE***/React.createElement(“div”, {
+ref: dragRef,
+onDrop: onDrop,
+onDragOver: onDragOver,
+onDragLeave: onDragLeave,
+onClick: () => {
+var _fileInputRef$current;
+return (_fileInputRef$current = fileInputRef.current) === null || _fileInputRef$current === void 0 ? void 0 : _fileInputRef$current.click();
+},
+className: “cursor-pointer rounded-xl border border-dashed p-6 text-center transition-all hover:bg-[#1a161208]”,
+style: {
+borderColor: “#1a161270”
+}
+}, /*#**PURE***/React.createElement(“input”, {
+ref: fileInputRef,
+type: “file”,
+multiple: true,
+accept: “.pdf,.png,.jpg,.jpeg,.webp,.txt,.md”,
+className: “hidden”,
+onChange: e => onFiles(e.target.files)
+}), /*#**PURE***/React.createElement(Icon, {
+name: “upload”,
+className: “mx-auto h-6 w-6 ink-mute”
+}), /*#**PURE***/React.createElement(“div”, {
+className: “font-display mt-3 text-lg”
+}, “Drop files here”), /*#**PURE***/React.createElement(“div”, {
+className: “font-body ink-mute mt-1 text-xs”
+}, “PDF \xB7 images \xB7 text \xB7 up to 30 MB each”)), files.length > 0 && /*#**PURE***/React.createElement(“ul”, {
+className: “mt-4 space-y-2”
+}, files.map((f, i) => /*#**PURE***/React.createElement(“li”, {
+key: i,
+className: “flex items-center justify-between gap-3 rounded-lg chip px-3 py-2”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “flex min-w-0 items-center gap-2”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “file-text”,
+className: “h-4 w-4 shrink-0 ink-mute”
+}), /*#**PURE***/React.createElement(“span”, {
+className: “font-body truncate text-sm”
+}, f.name), /*#**PURE***/React.createElement(“span”, {
+className: “font-mono ink-mute shrink-0 text-[11px]”
+}, (f.size / 1024).toFixed(0), “ KB”)), /*#**PURE***/React.createElement(“button”, {
+onClick: e => {
+e.stopPropagation();
+removeFile(i);
+},
+className: “ink-mute hover:accent”,
+“aria-label”: “Remove file”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “trash-2”,
+className: “h-4 w-4”
+}))))), error && /*#**PURE***/React.createElement(“div”, {
+className: “font-body mt-4 flex items-start gap-2 rounded-lg border p-3 text-sm accent”,
+style: {
+background: “#fee2e266”,
+borderColor: “#7c2d2940”
+}
+}, /*#**PURE***/React.createElement(Icon, {
+name: “alert-circle”,
+className: “h-4 w-4 shrink-0 mt-0.5”
+}), /*#**PURE***/React.createElement(“div”, null, error)), /*#**PURE***/React.createElement(“button”, {
+onClick: analyze,
+disabled: files.length === 0,
+className: “font-body btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium uppercase tracking-[0.18em]”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “sparkles”,
+className: “h-4 w-4”
+}), “ Analyse & Build Paper”), /*#**PURE***/React.createElement(“p”, {
+className: “font-body ink-mute mt-3 text-center text-[11px]”
+}, “Your scores stay anonymous and contribute to percentile predictions.”))));
+}
+function AnalyzingView(_ref5) {
+let log = _ref5.log;
+return /*#**PURE***/React.createElement(“div”, {
+className: “grid place-items-center pt-16”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “text-center fade-up”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3”
+}, “02 \xB7 In session”), /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-4xl sm:text-5xl tracking-tight”
+}, “Studying your paper”, /*#**PURE***/React.createElement(“span”, {
+className: “inline-flex ml-1”
+}, /*#**PURE***/React.createElement(“span”, {
+className: “pulse-dot”
+}, “.”), /*#**PURE***/React.createElement(“span”, {
+className: “pulse-dot pulse-dot-2”
+}, “.”), /*#**PURE***/React.createElement(“span”, {
+className: “pulse-dot pulse-dot-3”
+}, “.”))), /*#**PURE***/React.createElement(“p”, {
+className: “font-body ink-mute mt-4 max-w-md mx-auto”
+}, “Identifying the exam, confirming its standard format on the web, and composing original questions at matched difficulty.”)), /*#**PURE***/React.createElement(“div”, {
+className: “mt-12 w-full max-w-xl fade-up fade-up-2”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “bg-paper rounded-2xl border-ink border p-5 sm:p-6”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3 flex items-center gap-2”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “loader”,
+className: “h-3 w-3 animate-spin”
+}), “ Live progress”), /*#**PURE***/React.createElement(“ul”, {
+className: “font-mono space-y-2 text-sm”
+}, log.map((l, i) => /*#**PURE***/React.createElement(“li”, {
+key: i,
+className: “flex gap-3”
+}, /*#**PURE***/React.createElement(“span”, {
+className: “ink-mute shrink-0”
+}, String(i + 1).padStart(2, “0”)), /*#**PURE***/React.createElement(“span”, null, l))), log.length === 0 && /*#**PURE***/React.createElement(“li”, {
+className: “ink-mute text-sm font-body”
+}, “Waking up the analyst\u2026”)))));
+}
+function ReadyView(_ref6) {
+var _examInfo$medals, _examInfo$medals2, _examInfo$medals3;
+let examInfo = _ref6.examInfo,
+numQ = _ref6.numQ,
+startExam = _ref6.startExam;
+if (!examInfo) return null;
+const Stat = _ref7 => {
+let label = _ref7.label,
+value = _ref7.value;
+return /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[10px] uppercase tracking-[0.22em] ink-mute mb-1.5”
+}, label), /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-2xl leading-none capitalize”
+}, value));
+};
+const MedalCard = _ref8 => {
+let tier = _ref8.tier,
+label = _ref8.label,
+threshold = _ref8.threshold;
+const colors = {
+gold: “#b9892e”,
+silver: “#8a8a8a”,
+bronze: “#a0633a”
+};
+return /*#**PURE***/React.createElement(“div”, {
+className: “rounded-xl p-3 text-center”,
+style: {
+border: “1px solid #1a161225”,
+background: “#ffffff30”
+}
+}, /*#**PURE***/React.createElement(Icon, {
+name: “medal”,
+className: “mx-auto h-5 w-5”,
+style: {
+color: colors[tier]
+}
+}), /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-base mt-1.5”
+}, label), /*#**PURE***/React.createElement(“div”, {
+className: “font-mono text-[11px] ink-mute”
+}, “\u2265 “, threshold !== null && threshold !== void 0 ? threshold : “?”, “%”));
+};
+return /*#**PURE***/React.createElement(“div”, {
+className: “grid gap-8 pt-6 lg:grid-cols-12”
+}, /*#**PURE***/React.createElement(“section”, {
+className: “lg:col-span-7 fade-up”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3”
+}, “03 \xB7 Brief from the registrar”), /*#**PURE***/React.createElement(“h2”, {
+className: “font-display text-4xl tracking-tight sm:text-5xl”
+}, examInfo.exam_name), /*#**PURE***/React.createElement(“p”, {
+className: “font-body ink-mute mt-4 max-w-2xl text-base leading-relaxed”
+}, examInfo.rationale), /*#**PURE***/React.createElement(“dl”, {
+className: “mt-8 grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4”
+}, /*#**PURE***/React.createElement(Stat, {
+label: “Duration”,
+value: `${examInfo.duration_minutes} min`
+}), /*#**PURE***/React.createElement(Stat, {
+label: “Questions”,
+value: `${numQ}`
+}), /*#**PURE***/React.createElement(Stat, {
+label: “Format”,
+value: `${examInfo.question_format}${examInfo.num_options ? ` (${examInfo.num_options} opts)` : ""}`
+}), /*#**PURE***/React.createElement(Stat, {
+label: “Difficulty”,
+value: examInfo.difficulty
+})), /*#**PURE***/React.createElement(“div”, {
+className: “hairline mt-10”
+}), /*#**PURE***/React.createElement(“div”, {
+className: “mt-6 grid gap-6 sm:grid-cols-2”
+}, /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.18em] ink-mute mb-2”
+}, “Marking”), /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-sm”
+}, examInfo.marking_scheme), examInfo.negative_marking ? /*#**PURE***/React.createElement(“div”, {
+className: “font-mono mt-2 text-xs accent”
+}, “Negative: \u2212”, examInfo.negative_marking, “ per wrong answer”) : null), /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.18em] ink-mute mb-2”
+}, “Subjects”), /*#**PURE***/React.createElement(“div”, {
+className: “flex flex-wrap gap-2”
+}, (examInfo.subjects || []).map((s, i) => /*#**PURE***/React.createElement(“span”, {
+key: i,
+className: “font-body chip rounded-full px-3 py-1 text-xs”
+}, s)))))), /*#**PURE***/React.createElement(“aside”, {
+className: “lg:col-span-5 fade-up fade-up-2”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “bg-paper rounded-2xl border-ink border p-7”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3”
+}, “\u2736 Examination room”), /*#**PURE***/React.createElement(“p”, {
+className: “font-display text-2xl leading-tight”
+}, “When you press “, /*#**PURE***/React.createElement(“em”, {
+className: “italic”
+}, “Begin”), “, the clock starts.”), /*#**PURE***/React.createElement(“ul”, {
+className: “font-body ink-mute mt-5 space-y-2 text-sm”
+}, /*#**PURE***/React.createElement(“li”, null, “\xB7 No pause once the timer is running.”), /*#**PURE***/React.createElement(“li”, null, “\xB7 Answers auto-save as you go.”), /*#**PURE***/React.createElement(“li”, null, “\xB7 Time-up triggers automatic submission.”), /*#**PURE***/React.createElement(“li”, null, “\xB7 Your result is benchmarked against past attempts.”)), /*#**PURE***/React.createElement(“button”, {
+onClick: startExam,
+className: “font-body btn-primary mt-7 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium uppercase tracking-[0.18em]”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “play”,
+className: “h-4 w-4”
+}), “ Begin Examination”), /*#**PURE***/React.createElement(“div”, {
+className: “hairline mt-6”
+}), /*#**PURE***/React.createElement(“div”, {
+className: “mt-5”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.18em] ink-mute mb-3”
+}, “Medal thresholds”), /*#**PURE***/React.createElement(“div”, {
+className: “grid grid-cols-3 gap-3”
+}, /*#**PURE***/React.createElement(MedalCard, {
+tier: “gold”,
+label: “Gold”,
+threshold: (_examInfo$medals = examInfo.medals) === null || _examInfo$medals === void 0 ? void 0 : _examInfo$medals.gold_pct
+}), /*#**PURE***/React.createElement(MedalCard, {
+tier: “silver”,
+label: “Silver”,
+threshold: (_examInfo$medals2 = examInfo.medals) === null || _examInfo$medals2 === void 0 ? void 0 : _examInfo$medals2.silver_pct
+}), /*#**PURE***/React.createElement(MedalCard, {
+tier: “bronze”,
+label: “Bronze”,
+threshold: (_examInfo$medals3 = examInfo.medals) === null || _examInfo$medals3 === void 0 ? void 0 : _examInfo$medals3.bronze_pct
+}))))));
+}
+function ExamView(_ref9) {
+var _q$marks, _q$marks2, _answers$currentQ;
+let examInfo = _ref9.examInfo,
+questions = _ref9.questions,
+answers = _ref9.answers,
+setAnswers = _ref9.setAnswers,
+marked = _ref9.marked,
+setMarked = _ref9.setMarked,
+currentQ = _ref9.currentQ,
+setCurrentQ = _ref9.setCurrentQ,
+timeLeft = _ref9.timeLeft,
+onFinish = _ref9.onFinish;
+const q = questions[currentQ];
+const totalTime = ((examInfo === null || examInfo === void 0 ? void 0 : examInfo.duration_minutes) || 1) * 60;
+const timePct = Math.max(0, Math.min(100, timeLeft / totalTime * 100));
+const lowTime = timeLeft <= 60;
+const setAnswer = val => {
+const next = {
+…answers
+};
+if (val === undefined) {
+delete next[currentQ];
+} else {
+next[currentQ] = val;
+}
+setAnswers(next);
+};
+const toggleMark = () => setMarked({
+…marked,
+[currentQ]: !marked[currentQ]
+});
+const goPrev = () => setCurrentQ(Math.max(0, currentQ - 1));
+const goNext = () => setCurrentQ(Math.min(questions.length - 1, currentQ + 1));
+const answeredCount = Object.keys(answers).filter(k => answers[k] != null && answers[k] !== “”).length;
+return /*#**PURE***/React.createElement(“div”, {
+className: “grid gap-6 pt-2 lg:grid-cols-12”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “lg:col-span-12 fade-up sticky top-0 z-30”,
+style: {
+background: “linear-gradient(180deg, #f5efe4 0%, #efe7d8 70%, transparent 100%)”,
+paddingTop: “8px”,
+paddingBottom: “8px”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+className: “bg-paper rounded-2xl border-ink border px-3 sm:px-5 py-3 flex items-center justify-between gap-2 sm:gap-4”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “flex items-center gap-2 sm:gap-3 min-w-0 flex-1”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-sm sm:text-lg leading-tight truncate”,
+title: examInfo === null || examInfo === void 0 ? void 0 : examInfo.exam_name
+}, examInfo === null || examInfo === void 0 ? void 0 : examInfo.exam_name), /*#**PURE***/React.createElement(“div”, {
+className: “font-body chip rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] ink-mute hidden md:inline-block shrink-0”
+}, examInfo === null || examInfo === void 0 ? void 0 : examInfo.question_format)), /*#**PURE***/React.createElement(“div”, {
+className: “flex items-center gap-2 shrink-0”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-mono inline-flex items-center gap-1.5 rounded-full px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm tabular-nums shrink-0”,
+style: {
+background: lowTime ? “#fee2e2” : “#ffffff66”,
+color: lowTime ? “#7c2d29” : “#1a1612”,
+border: lowTime ? “1px solid #7c2d29” : “1px solid #1a161230”
+}
+}, /*#**PURE***/React.createElement(Icon, {
+name: “clock”,
+className: “h-3.5 w-3.5 sm:h-4 sm:w-4”
+}), “ “, formatTime(timeLeft)), /*#**PURE***/React.createElement(“button”, {
+onClick: onFinish,
+className: “font-body btn-primary inline-flex items-center gap-1.5 rounded-full px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-medium uppercase tracking-[0.14em] sm:tracking-[0.18em] shrink-0”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “flag”,
+className: “h-3 w-3 sm:h-3.5 sm:w-3.5”
+}), “ Finish”))), /*#**PURE***/React.createElement(“div”, {
+className: “mt-1.5 h-[2px] w-full overflow-hidden rounded-full”,
+style: {
+background: “#1a161215”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+className: “h-full transition-all duration-1000”,
+style: {
+width: `${timePct}%`,
+backgroundColor: lowTime ? “#7c2d29” : “#1a1612”
+}
+}))), /*#**PURE***/React.createElement(“section”, {
+className: “lg:col-span-8 fade-up fade-up-1”
+}, /*#**PURE***/React.createElement(“div”, {
+key: `q-${currentQ}`,
+className: “bg-paper rounded-2xl border-ink border p-6 sm:p-8”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “flex items-start justify-between gap-4”
+}, /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.22em] ink-mute”
+}, “Question “, currentQ + 1, “ of “, questions.length, q !== null && q !== void 0 && q.subject ? ` · ${q.subject}` : “”), /*#**PURE***/React.createElement(“div”, {
+className: “font-mono mt-1 text-[11px] ink-mute”
+}, (q === null || q === void 0 ? void 0 : q.type) === “mcq” ? “Multiple choice” : “Numeric”, “ \xB7 “, (_q$marks = q === null || q === void 0 ? void 0 : q.marks) !== null && _q$marks !== void 0 ? _q$marks : 1, “ mark”, ((_q$marks2 = q === null || q === void 0 ? void 0 : q.marks) !== null && _q$marks2 !== void 0 ? _q$marks2 : 1) > 1 ? “s” : “”)), /*#**PURE***/React.createElement(“button”, {
+onClick: toggleMark,
+className: “font-body inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.16em] transition-all”,
+style: marked[currentQ] ? {
+background: “#7c2d29”,
+color: “white”
+} : {
+border: “1px solid #1a161240”
+}
+}, /*#**PURE***/React.createElement(Icon, {
+name: “flag”,
+className: “h-3 w-3”
+}), “ “, marked[currentQ] ? “Marked” : “Mark for review”)), /*#**PURE***/React.createElement(“div”, {
+className: “hairline my-5”
+}), /*#**PURE***/React.createElement(MathText, {
+className: “font-display text-xl sm:text-[22px] leading-relaxed”,
+style: {
+whiteSpace: “pre-wrap”
+}
+}, q === null || q === void 0 ? void 0 : q.text), (q === null || q === void 0 ? void 0 : q.type) === “mcq” && Array.isArray(q === null || q === void 0 ? void 0 : q.options) && /*#**PURE***/React.createElement(“div”, {
+className: “mt-7 space-y-3”
+}, q.options.map((opt, i) => {
+const selected = answers[currentQ] === i;
+const letter = String.fromCharCode(65 + i);
+return /*#**PURE***/React.createElement(“button”, {
+key: `${currentQ}-${i}`,
+onClick: () => setAnswer(i),
+className: “w-full text-left rounded-xl border px-4 py-3.5 transition-all”,
+style: {
+borderColor: selected ? “#1a1612” : “#1a161230”,
+background: selected ? “#1a161208” : “transparent”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+className: “flex items-start gap-3”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “grid h-7 w-7 shrink-0 place-items-center rounded-full font-mono text-sm”,
+style: selected ? {
+background: “#1a1612”,
+color: “#fbf6ec”
+} : {
+border: “1px solid #1a161240”
+}
+}, letter), /*#**PURE***/React.createElement(MathText, {
+className: “font-body text-base leading-relaxed”
+}, opt == null ? “” : String(opt))));
+})), (q === null || q === void 0 ? void 0 : q.type) === “numeric” && /*#**PURE***/React.createElement(“div”, {
+className: “mt-7”
+}, /*#**PURE***/React.createElement(“label”, {
+className: “font-body block text-[11px] uppercase tracking-[0.18em] ink-mute mb-2”
+}, “Your numeric answer”), /*#**PURE***/React.createElement(“input”, {
+type: “text”,
+inputMode: “decimal”,
+value: (_answers$currentQ = answers[currentQ]) !== null && _answers$currentQ !== void 0 ? *answers$currentQ : “”,
+onChange: e => setAnswer(e.target.value),
+placeholder: “e.g. 42 or 3.14”,
+className: “font-mono w-full max-w-sm rounded-xl px-4 py-3 text-lg outline-none”,
+style: {
+border: “1px solid #1a161240”,
+background: “#ffffff80”
+}
+})), /*#**PURE***/React.createElement(“div”, {
+className: “mt-8 flex items-center justify-between”
+}, /*#**PURE***/React.createElement(“button”, {
+onClick: goPrev,
+disabled: currentQ === 0,
+className: “font-body btn-ghost inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm disabled:opacity-30”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “chevron-left”,
+className: “h-4 w-4”
+}), “ Previous”), /*#**PURE***/React.createElement(“button”, {
+onClick: () => setAnswer(undefined),
+className: “font-body ink-mute hover:ink text-xs uppercase tracking-[0.18em]”
+}, “Clear answer”), /*#**PURE***/React.createElement(“button”, {
+onClick: goNext,
+disabled: currentQ === questions.length - 1,
+className: “font-body btn-ghost inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm disabled:opacity-30”
+}, “Next “, /*#**PURE***/React.createElement(Icon, {
+name: “chevron-right”,
+className: “h-4 w-4”
+}))))), /*#**PURE***/React.createElement(“aside”, {
+className: “lg:col-span-4 fade-up fade-up-2”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “bg-paper rounded-2xl border-ink border p-5 sm:p-6 lg:sticky lg:top-4”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-4”
+}, “Question palette”), /*#**PURE***/React.createElement(“div”, {
+className: “grid grid-cols-6 gap-2 sm:grid-cols-8 lg:grid-cols-6”
+}, questions.map((*, i) => {
+const isCurr = i === currentQ;
+const isAns = answers[i] != null && answers[i] !== “”;
+const isMark = marked[i];
+return /*#**PURE***/React.createElement(“button”, {
+key: i,
+onClick: () => setCurrentQ(i),
+className: “relative grid aspect-square place-items-center rounded-lg font-mono text-sm transition-all”,
+style: {
+background: isCurr ? “#1a1612” : isAns ? “#1a161215” : “transparent”,
+color: isCurr ? “#fbf6ec” : “#1a1612”,
+border: isCurr ? “1px solid #1a1612” : isAns ? “1px solid #1a161240” : “1px solid #1a161220”
+}
+}, i + 1, isMark && /*#**PURE***/React.createElement(“span”, {
+className: “absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full”,
+style: {
+background: “#7c2d29”
+}
+}));
+})), /*#**PURE***/React.createElement(“div”, {
+className: “hairline my-4”
+}), /*#**PURE***/React.createElement(“ul”, {
+className: “font-body space-y-1.5 text-xs”
+}, /*#**PURE***/React.createElement(“li”, {
+className: “flex items-center gap-2”
+}, /*#**PURE***/React.createElement(“span”, {
+className: “h-3 w-3 rounded-sm”,
+style: {
+background: “#1a1612”
+}
+}), “Current”), /*#**PURE***/React.createElement(“li”, {
+className: “flex items-center gap-2”
+}, /*#**PURE***/React.createElement(“span”, {
+className: “h-3 w-3 rounded-sm”,
+style: {
+background: “#1a161215”,
+border: “1px solid #1a161240”
+}
+}), “Answered (”, answeredCount, “)”), /*#**PURE***/React.createElement(“li”, {
+className: “flex items-center gap-2”
+}, /*#**PURE***/React.createElement(“span”, {
+className: “h-3 w-3 rounded-sm”,
+style: {
+border: “1px solid #1a161220”
+}
+}), “Unanswered”), /*#**PURE***/React.createElement(“li”, {
+className: “flex items-center gap-2”
+}, /*#**PURE***/React.createElement(“span”, {
+className: “h-2.5 w-2.5 rounded-full”,
+style: {
+background: “#7c2d29”
+}
+}), “Marked for review”)))));
+}
+function ResultsView(_ref0) {
+let data = _ref0.data,
+examInfo = _ref0.examInfo,
+onRestart = _ref0.onRestart;
+const total = data.total,
+max = data.max,
+percentage = data.percentage,
+correctCount = data.correctCount,
+perQ = data.perQ,
+percentile = data.percentile,
+historyCount = data.historyCount,
+medal = data.medal,
+autoSubmitted = data.autoSubmitted;
+const medalColors = {
+gold: “#b9892e”,
+silver: “#8a8a8a”,
+bronze: “#a0633a”
+};
+return /*#**PURE***/React.createElement(“div”, {
+className: “pt-4”
+}, /*#**PURE***/React.createElement(“section”, {
+className: “grid gap-8 lg:grid-cols-12 fade-up”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “lg:col-span-7”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-3”
+}, “04 \xB7 Final report”), /*#**PURE***/React.createElement(“h2”, {
+className: “font-display text-5xl sm:text-6xl tracking-tight”
+}, percentage >= 90 ? “Magnificent.” : percentage >= 75 ? “Strong showing.” : percentage >= 50 ? “A solid effort.” : “Room to grow.”), autoSubmitted && /*#**PURE***/React.createElement(“div”, {
+className: “font-body mt-2 text-xs uppercase tracking-[0.18em] accent”
+}, “\xB7 time elapsed \u2014 submitted automatically”), /*#**PURE***/React.createElement(“p”, {
+className: “font-body ink-mute mt-4 max-w-xl”
+}, examInfo === null || examInfo === void 0 ? void 0 : examInfo.exam_name, “ \xB7 “, correctCount, “ of “, perQ.length, “ correct \xB7 scored “, total.toFixed(1), “ of “, max)), /*#**PURE***/React.createElement(“div”, {
+className: “lg:col-span-5”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “bg-paper rounded-2xl border-ink border p-7 grid grid-cols-3 gap-5”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “col-span-3 sm:col-span-1 text-center”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-6xl leading-none”
+}, percentage.toFixed(0), /*#**PURE***/React.createElement(“span”, {
+className: “font-body text-2xl ink-mute”
+}, “%”)), /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-2”
+}, “Overall score”)), /*#**PURE***/React.createElement(“div”, {
+className: “col-span-3 sm:col-span-1 text-center”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-6xl leading-none”
+}, percentile != null ? percentile : “—”, percentile != null && /*#**PURE***/React.createElement(“span”, {
+className: “font-body text-2xl ink-mute”
+}, “th”)), /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-2”
+}, percentile != null ? “Predicted percentile” : “Building cohort”)), /*#**PURE***/React.createElement(“div”, {
+className: “col-span-3 sm:col-span-1 text-center”
+}, medal ? /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(Icon, {
+name: “trophy”,
+className: “mx-auto h-12 w-12”,
+style: {
+color: medalColors[medal]
+}
+}), /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-2xl mt-1 capitalize”
+}, medal), /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-1”
+}, “Predicted medal”)) : /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(Icon, {
+name: “award”,
+className: “mx-auto h-12 w-12 ink-mute”
+}), /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-2xl mt-1”
+}, “No medal”), /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[10px] uppercase tracking-[0.22em] ink-mute mt-1”
+}, “Keep going”))), /*#**PURE***/React.createElement(“div”, {
+className: “col-span-3 hairline”
+}), /*#**PURE***/React.createElement(“div”, {
+className: “col-span-3 font-body text-xs ink-mute text-center”
+}, historyCount > 1 ? `Benchmarked against ${historyCount - 1} prior attempt${historyCount - 1 === 1 ? "" : "s"} of similar exams.` : “First attempt of this exam type — percentile will sharpen as more attempts are recorded.”)))), /*#**PURE***/React.createElement(“div”, {
+className: “hairline my-10”
+}), /*#**PURE***/React.createElement(“section”, {
+className: “fade-up fade-up-2”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-5”
+}, “Question-by-question review”), /*#**PURE***/React.createElement(“div”, {
+className: “space-y-4”
+}, perQ.map((q, i) => /*#**PURE***/React.createElement(ReviewItem, {
+key: i,
+q: q,
+idx: i
+})))), /*#**PURE***/React.createElement(“div”, {
+className: “mt-12 flex flex-wrap items-center justify-between gap-4 fade-up fade-up-3”
+}, /*#**PURE***/React.createElement(“button”, {
+onClick: () => window.print(),
+className: “font-body btn-ghost inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm uppercase tracking-[0.18em]”
+}, “Print report”), /*#**PURE***/React.createElement(“button”, {
+onClick: onRestart,
+className: “font-body btn-primary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm uppercase tracking-[0.18em]”
+}, “New examination”)));
+}
+function ReviewItem(_ref1) {
+let q = _ref1.q,
+idx = _ref1.idx;
+const _useState31 = useState(false),
+_useState32 = _slicedToArray(_useState31, 2),
+open = _useState32[0],
+setOpen = _useState32[1];
+const wasAttempted = q.userAnswer != null && q.userAnswer !== “”;
+return /*#**PURE***/React.createElement(“div”, {
+className: “bg-paper rounded-xl border p-4 sm:p-5 transition-all”,
+style: {
+borderColor: q.isCorrect ? “#1f6e3540” : wasAttempted ? “#7c2d2940” : “#1a161220”
+}
+}, /*#**PURE***/React.createElement(“button”, {
+onClick: () => setOpen(!open),
+className: “w-full text-left”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “flex items-start gap-3”
+}, q.isCorrect ? /*#**PURE***/React.createElement(Icon, {
+name: “check-circle-2”,
+className: “h-5 w-5 shrink-0 mt-0.5”,
+style: {
+color: “#1f6e35”
+}
+}) : wasAttempted ? /*#**PURE***/React.createElement(Icon, {
+name: “x-circle”,
+className: “h-5 w-5 shrink-0 mt-0.5 accent”
+}) : /*#**PURE***/React.createElement(Icon, {
+name: “alert-circle”,
+className: “h-5 w-5 shrink-0 mt-0.5 ink-mute”
+}), /*#**PURE***/React.createElement(“div”, {
+className: “min-w-0 flex-1”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.18em] ink-mute”
+}, “Q”, idx + 1, “ \xB7 “, q.subject || “—”, “ \xB7 “, q.isCorrect ? “Correct” : wasAttempted ? “Incorrect” : “Skipped”), !open && /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-base mt-1 leading-snug”,
+style: {
+display: “-webkit-box”,
+WebkitLineClamp: 2,
+WebkitBoxOrient: “vertical”,
+overflow: “hidden”
+}
+}, (q.text || “”).replace(/$$([^$]+)$$/g, “$1”).replace(/$([^$]+)$/g, “$1”).replace(/\[a-zA-Z]+/g, “”).replace(/\s+/g, “ “).trim())))), open && /*#**PURE***/React.createElement(“div”, {
+className: “mt-4 pl-8”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “hairline mb-4”
+}), /*#**PURE***/React.createElement(MathText, {
+className: “font-body text-base mb-4”,
+style: {
+whiteSpace: “pre-wrap”
+}
+}, q.text), q.type === “mcq” && Array.isArray(q.options) && /*#**PURE***/React.createElement(“div”, {
+className: “space-y-2”
+}, q.options.map((opt, i) => {
+const isCorrect = i === q.correct_index;
+const isUser = i === q.userAnswer;
+return /*#**PURE***/React.createElement(“div”, {
+key: `r-${idx}-${i}`,
+className: “font-body flex items-center gap-2 rounded-lg px-3 py-2 text-sm”,
+style: {
+background: isCorrect ? “#1f6e3515” : isUser ? “#7c2d2915” : “transparent”,
+border: `1px solid ${isCorrect ? "#1f6e3540" : isUser ? "#7c2d2940" : "#1a161215"}`
+}
+}, /*#**PURE***/React.createElement(“span”, {
+className: “font-mono text-xs ink-mute w-5”
+}, String.fromCharCode(65 + i)), /*#**PURE***/React.createElement(MathText, {
+as: “span”,
+className: “flex-1”
+}, opt == null ? “” : String(opt)), isCorrect && /*#**PURE***/React.createElement(“span”, {
+className: “font-body text-[10px] uppercase tracking-[0.18em]”,
+style: {
+color: “#1f6e35”
+}
+}, “Correct”), isUser && !isCorrect && /*#**PURE***/React.createElement(“span”, {
+className: “font-body text-[10px] uppercase tracking-[0.18em] accent”
+}, “Your answer”));
+})), q.type === “numeric” && /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-sm space-y-1”
+}, /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“span”, {
+className: “ink-mute”
+}, “Your answer: “), /*#**PURE***/React.createElement(“span”, {
+className: “font-mono”
+}, wasAttempted ? q.userAnswer : “—”)), /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“span”, {
+className: “ink-mute”
+}, “Correct answer: “), /*#**PURE***/React.createElement(“span”, {
+className: “font-mono”
+}, q.correct_value))), q.explanation && /*#**PURE***/React.createElement(“div”, {
+className: “font-body mt-4 rounded-lg p-3 text-sm leading-relaxed”,
+style: {
+background: “#ffffff66”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+className: “text-[11px] uppercase tracking-[0.18em] ink-mute mb-1”
+}, “Solution”), /*#**PURE***/React.createElement(MathText, null, q.explanation))));
+}
+function ConfirmModal(_ref10) {
+let title = _ref10.title,
+body = _ref10.body,
+onCancel = _ref10.onCancel,
+onConfirm = _ref10.onConfirm;
+return /*#**PURE***/React.createElement(“div”, {
+className: “fixed inset-0 z-50 grid place-items-center p-4”,
+style: {
+background: “rgba(0,0,0,0.4)”
+},
+onClick: onCancel
+}, /*#**PURE***/React.createElement(“div”, {
+onClick: e => e.stopPropagation(),
+className: “bg-paper rounded-2xl border-ink border p-6 max-w-md w-full fade-up”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-2xl mb-2”
+}, title), /*#**PURE***/React.createElement(“p”, {
+className: “font-body ink-mute text-sm”
+}, body), /*#**PURE***/React.createElement(“div”, {
+className: “mt-6 flex justify-end gap-3”
+}, /*#**PURE***/React.createElement(“button”, {
+onClick: onCancel,
+className: “font-body btn-ghost rounded-full px-5 py-2 text-sm uppercase tracking-[0.18em]”
+}, “Keep going”), /*#**PURE***/React.createElement(“button”, {
+onClick: onConfirm,
+className: “font-body btn-primary rounded-full px-5 py-2 text-sm uppercase tracking-[0.18em]”
+}, “Submit now”))));
+}
+const MODEL_OPTIONS = [{
+id: “claude-sonnet-4-6”,
+label: “Sonnet 4.6 — recommended”,
+hint: “Balanced speed and quality”
+}, {
+id: “claude-opus-4-7”,
+label: “Opus 4.7 — best quality”,
+hint: “Slower, higher cost”
+}, {
+id: “claude-haiku-4-5-20251001”,
+label: “Haiku 4.5 — fastest”,
+hint: “Cheapest, may produce fewer questions”
+}];
+function ModelSelector(_ref11) {
+let selected = _ref11.selected,
+onChange = _ref11.onChange;
+return /*#**PURE***/React.createElement(“div”, {
+className: “mt-5”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[10px] uppercase tracking-[0.22em] ink-mute mb-2”
+}, “Model”), /*#**PURE***/React.createElement(“div”, {
+className: “space-y-2”
+}, MODEL_OPTIONS.map(m => {
+const active = selected === m.id;
+return /*#**PURE***/React.createElement(“button”, {
+key: m.id,
+onClick: () => onChange(m.id),
+className: “w-full text-left rounded-xl px-3 py-2.5 transition-all”,
+style: {
+border: active ? “1px solid #1a1612” : “1px solid #1a161220”,
+background: active ? “#1a161208” : “transparent”
+}
+}, /*#**PURE***/React.createElement(“div”, {
+className: “flex items-start gap-2.5”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “grid h-4 w-4 shrink-0 place-items-center rounded-full mt-0.5”,
+style: {
+border: active ? “1px solid #1a1612” : “1px solid #1a161240”
+}
+}, active && /*#**PURE***/React.createElement(“div”, {
+className: “h-2 w-2 rounded-full”,
+style: {
+background: “#1a1612”
+}
+})), /*#**PURE***/React.createElement(“div”, {
+className: “min-w-0 flex-1”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-sm”
+}, m.label), /*#**PURE***/React.createElement(“div”, {
+className: “font-mono text-[10px] ink-mute mt-0.5 break-all”
+}, m.id, “ \xB7 “, m.hint))));
+})));
+}
+function KeyModal(_ref12) {
+let onClose = _ref12.onClose;
+const existing = window.__GET_ANTHROPIC_KEY();
+const _useState33 = useState(existing ? “view” : “edit”),
+_useState34 = _slicedToArray(_useState33, 2),
+mode = _useState34[0],
+setMode = _useState34[1];
+const _useState35 = useState(””),
+_useState36 = _slicedToArray(_useState35, 2),
+input = _useState36[0],
+setInput = _useState36[1];
+const _useState37 = useState(false),
+_useState38 = _slicedToArray(_useState37, 2),
+reveal = _useState38[0],
+setReveal = _useState38[1];
+const _useState39 = useState(false),
+_useState40 = _slicedToArray(_useState39, 2),
+justSaved = _useState40[0],
+setJustSaved = _useState40[1];
+const _useState41 = useState(localStorage.getItem(“anthropic_model”) || “claude-sonnet-4-6”),
+_useState42 = _slicedToArray(_useState41, 2),
+selectedModel = _useState42[0],
+setSelectedModel = _useState42[1];
+const inputRef = useRef(null);
+useEffect(() => {
+if (mode === “edit” && inputRef.current) inputRef.current.focus();
+}, [mode]);
+const updateModel = id => {
+setSelectedModel(id);
+localStorage.setItem(“anthropic_model”, id);
+};
+const save = () => {
+const trimmed = input.trim();
+if (!trimmed) return;
+window.__SET_ANTHROPIC_KEY(trimmed);
+setInput(””);
+setJustSaved(true);
+setMode(“view”);
+setTimeout(() => setJustSaved(false), 1800);
+};
+const forget = () => {
+if (confirm(“Forget the stored API key on this device? You’ll need to re-enter it next time.”)) {
+window.__FORGET_ANTHROPIC_KEY();
+setInput(””);
+setMode(“edit”);
+}
+};
+const currentKey = window.__GET_ANTHROPIC_KEY();
+return /*#**PURE***/React.createElement(“div”, {
+className: “fixed inset-0 z-50 grid place-items-center p-4”,
+style: {
+background: “rgba(0,0,0,0.4)”
+},
+onClick: onClose
+}, /*#**PURE***/React.createElement(“div”, {
+onClick: e => e.stopPropagation(),
+className: “bg-paper rounded-2xl border-ink border p-6 max-w-md w-full fade-up”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “flex items-start justify-between gap-3”
+}, /*#**PURE***/React.createElement(“div”, null, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[11px] uppercase tracking-[0.22em] ink-mute mb-2”
+}, “Credentials”), /*#**PURE***/React.createElement(“div”, {
+className: “font-display text-2xl”
+}, “API settings”)), /*#**PURE***/React.createElement(“button”, {
+onClick: onClose,
+className: “ink-mute hover:ink shrink-0”,
+“aria-label”: “Close”
+}, /*#**PURE***/React.createElement(Icon, {
+name: “x”,
+className: “h-5 w-5”
+}))), mode === “view” && currentKey && /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(“p”, {
+className: “font-body ink-mute text-sm mt-3”
+}, “A key is stored on this device. It’s used only to call “, /*#**PURE***/React.createElement(“span”, {
+className: “font-mono”
+}, “api.anthropic.com”), “ and never leaves the browser otherwise.”), /*#**PURE***/React.createElement(“div”, {
+className: “mt-5 rounded-xl chip p-4”
+}, /*#**PURE***/React.createElement(“div”, {
+className: “font-body text-[10px] uppercase tracking-[0.22em] ink-mute mb-2”
+}, “Current key”), /*#**PURE***/React.createElement(“div”, {
+className: “font-mono text-sm break-all”
+}, reveal ? currentKey : window.__MASK_KEY(currentKey)), /*#**PURE***/React.createElement(“button”, {
+onClick: () => setReveal(!reveal),
+className: “font-body mt-2 text-xs ink-mute hover:ink inline-flex items-center gap-1”
+}, /*#**PURE***/React.createElement(Icon, {
+name: reveal ? “eye-off” : “eye”,
+className: “h-3 w-3”
+}), reveal ? “Hide” : “Reveal”)), /*#**PURE***/React.createElement(ModelSelector, {
+selected: selectedModel,
+onChange: updateModel
+}), justSaved && /*#**PURE***/React.createElement(“div”, {
+className: “font-body mt-3 text-xs accent”
+}, “\u2713 Key updated.”), /*#**PURE***/React.createElement(“div”, {
+className: “mt-6 flex flex-wrap justify-between gap-2”
+}, /*#**PURE***/React.createElement(“button”, {
+onClick: forget,
+className: “font-body btn-ghost rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]”,
+style: {
+borderColor: “#7c2d2960”,
+color: “#7c2d29”
+}
+}, “Forget key”), /*#**PURE***/React.createElement(“div”, {
+className: “flex gap-2”
+}, /*#**PURE***/React.createElement(“button”, {
+onClick: () => setMode(“edit”),
+className: “font-body btn-ghost rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]”
+}, “Replace”), /*#**PURE***/React.createElement(“button”, {
+onClick: onClose,
+className: “font-body btn-primary rounded-full px-5 py-2 text-xs uppercase tracking-[0.18em]”
+}, “Done”)))), mode === “edit” && /*#**PURE***/React.createElement(React.Fragment, null, /*#**PURE***/React.createElement(“p”, {
+className: “font-body ink-mute text-sm mt-3”
+}, currentKey ? “Paste a new key. It will replace the existing one.” : “Paste your Anthropic API key to begin. Get one at “, !currentKey && /*#**PURE***/React.createElement(“a”, {
+href: “https://console.anthropic.com/”,
+target: “_blank”,
+rel: “noopener noreferrer”,
+className: “accent underline”
+}, “console.anthropic.com”), !currentKey && “.”), /*#**PURE***/React.createElement(“input”, {
+ref: inputRef,
+type: “password”,
+autoComplete: “off”,
+autoCorrect: “off”,
+autoCapitalize: “off”,
+spellCheck: “false”,
+value: input,
+onChange: e => setInput(e.target.value),
+onKeyDown: e => {
+if (e.key === “Enter”) save();
+},
+placeholder: “sk-ant-\u2026”,
+className: “font-mono w-full mt-5 rounded-xl px-4 py-3 text-sm outline-none”,
+style: {
+border: “1px solid #1a161240”,
+background: “#ffffff80”
+}
+}), /*#**PURE***/React.createElement(“p”, {
+className: “font-body ink-mute text-[11px] mt-2”
+}, “Stored in your browser’s localStorage on this device only.”), /*#**PURE***/React.createElement(ModelSelector, {
+selected: selectedModel,
+onChange: updateModel
+}), /*#**PURE***/React.createElement(“div”, {
+className: “mt-6 flex justify-end gap-2”
+}, currentKey && /*#**PURE***/React.createElement(“button”, {
+onClick: () => setMode(“view”),
+className: “font-body btn-ghost rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]”
+}, “Cancel”), /*#**PURE***/React.createElement(“button”, {
+onClick: save,
+disabled: !input.trim(),
+className: “font-body btn-primary rounded-full px-5 py-2 text-xs uppercase tracking-[0.18em] disabled:opacity-40”
+}, “Save key”)))));
+}
+class ErrorBoundary extends React.Component {
+constructor(props) {
+super(props);
+this.state = {
+error: null
+};
+}
+static getDerivedStateFromError(error) {
+return {
+error
+};
+}
+componentDidCatch(error, info) {
+const msg = error && error.message || String(error);
+const stack = info && info.componentStack || error && error.stack || “”;
+console.error(“React caught:”, error, info);
+if (window.__SHOW_FATAL) {
+window.__SHOW_FATAL(“React component error: “ + msg + “\n\nComponent stack:” + stack.split(”\n”).slice(0, 8).join(”\n”));
+}
+}
+render() {
+if (this.state.error) {
+return React.createElement(“div”, {
+style: {
+padding: “48px 24px”,
+fontFamily: “Georgia, serif”,
+maxWidth: 560,
+margin: “0 auto”,
+textAlign: “center”
+}
+}, React.createElement(“div”, {
+style: {
+fontSize: 22,
+marginBottom: 8
+}
+}, “Something went wrong.”), React.createElement(“div”, {
+style: {
+fontSize: 13,
+color: “#6b5d4a”,
+marginBottom: 16
+}
+}, this.state.error && this.state.error.message || “”), React.createElement(“button”, {
+onClick: () => {
+this.setState({
+error: null
+});
+window.location.reload();
+},
+style: {
+background: “#1a1612”,
+color: “#fbf6ec”,
+border: 0,
+padding: “10px 20px”,
+borderRadius: 999,
+cursor: “pointer”
+}
+}, “Reload”));
+}
+return this.props.children;
+}
+}
+const root = ReactDOM.createRoot(document.getElementById(“root”));
+root.render(/*#**PURE***/React.createElement(ErrorBoundary, null, /*#**PURE***/React.createElement(App, null)));
+</script>
+
+  </body>
+</html>
