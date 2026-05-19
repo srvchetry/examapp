@@ -195,33 +195,67 @@ var CURRENCY_PLACEHOLDER = "\uE000"; // private-use area, won't appear in normal
 // Convert text containing $...$, $$...$$, currency $X.XX into safe HTML.
 // Returns an HTML string. Falls back to plain (escaped) text if KaTeX
 // hasn't loaded yet.
+// Classify the content between matched $...$ as either currency or math.
+var classifyDollarPair = function classifyDollarPair(content) {
+  if (!content) return "currency";
+  if (/[+\-*\/=^_<>]/.test(content)) return "math";
+  if (/\\[a-zA-Z]/.test(content)) return "math";
+  if (/^[\d., ]+$/.test(content.trim())) return "currency";
+  if (/[a-zA-Z]{2,}/.test(content)) return "currency";
+  if (/^[a-zA-Z]$/.test(content.trim())) return "math";
+  return "math";
+};
 var renderMathToHTML = function renderMathToHTML(text) {
   if (typeof text !== "string") return escapeHtml(text == null ? "" : String(text));
-  // Step 1: protect currency $ by swapping to a placeholder
-  var protectedText = "";
+  // Step 1: Walk text and replace currency $ with placeholder.
+  // Math pairs ($...$) are left untouched. $$..$$ always math.
+  var parts = [];
   var i = 0;
   while (i < text.length) {
-    var ch = text[i];
-    if (ch === "$") {
+    if (text[i] === "$") {
+      // Display math $$...$$
+      if (text[i + 1] === "$") {
+        var close = text.indexOf("$$", i + 2);
+        if (close !== -1) {
+          parts.push(text.slice(i, close + 2));
+          i = close + 2;
+          continue;
+        }
+      }
+      // Look for closing single $
       var j = i + 1;
-      while (j < text.length && text[j] === " ") j++;
-      if (j < text.length && /[0-9]/.test(text[j])) {
-        // Currency: replace this $ with placeholder
-        protectedText += CURRENCY_PLACEHOLDER;
+      while (j < text.length && text[j] !== "$" && text[j] !== "\n") j++;
+      if (j < text.length && text[j] === "$") {
+        var content = text.slice(i + 1, j);
+        var kind = classifyDollarPair(content);
+        if (kind === "math") {
+          parts.push(text.slice(i, j + 1));
+        } else {
+          parts.push(CURRENCY_PLACEHOLDER);
+          parts.push(content);
+          parts.push(CURRENCY_PLACEHOLDER);
+        }
+        i = j + 1;
+        continue;
+      }
+      // No closing $: bare currency if followed by a digit
+      var k = i + 1;
+      while (k < text.length && text[k] === " ") k++;
+      if (k < text.length && /\d/.test(text[k])) {
+        parts.push(CURRENCY_PLACEHOLDER);
         i++;
         continue;
       }
     }
-    protectedText += ch;
+    parts.push(text[i]);
     i++;
   }
+  var protectedText = parts.join("");
 
   // Step 2: render math via KaTeX into a detached div
   if (window.renderMathInElement) {
     try {
       var sandbox = document.createElement("div");
-      // Escape HTML in the text so user content can't inject markup,
-      // but keep KaTeX delimiters intact.
       sandbox.innerHTML = escapeHtml(protectedText);
       window.renderMathInElement(sandbox, {
         delimiters: [{
@@ -251,7 +285,6 @@ var renderMathToHTML = function renderMathToHTML(text) {
       console.warn("KaTeX render failed, falling back to plain:", e);
     }
   }
-  // KaTeX not loaded or threw — escape and restore currency
   return escapeHtml(protectedText).split(CURRENCY_PLACEHOLDER).join("$");
 };
 var MathText = function MathText(_ref2) {
@@ -1076,7 +1109,7 @@ function App() {
             numOptions = info.num_options || 4;
             optionLetters = numOptions === 5 ? "A-E" : "A-D";
             exampleOptions = numOptions === 5 ? '["A", "B", "C", "D", "E"]' : '["A", "B", "C", "D"]';
-            genSystem = "You are an expert exam question writer. Generate exactly N fresh ORIGINAL practice questions matching the difficulty, subjects, and format of the sample provided. The exact count N will be specified in the user message.\n\nCRITICAL DISCIPLINE FOR CORRECTNESS:\nFor EACH question, follow this process before writing it:\n1. Decide the question and write it.\n2. Solve it yourself, step by step, in the \"explanation\" field. Be rigorous. Do not skip steps.\n3. The final value/result of your worked solution is the correct answer.\n4. For MCQ: write EXACTLY ".concat(numOptions, " options (labelled ").concat(optionLetters, ") where exactly one matches your worked solution. Set correct_index to the 0-based index of THAT option (0 to ").concat(numOptions - 1, "). Double-check by re-reading: \"the worked solution gives X; option [correct_index] is X; other options are not X.\"\n5. For numeric: set correct_value to the exact numeric result of your worked solution.\n\nSCHEMA RULES:\n- For MCQ questions: include \"options\" (array of EXACTLY ").concat(numOptions, " strings) and \"correct_index\" (integer 0 to ").concat(numOptions - 1, "). Do NOT include \"correct_value\" or \"tolerance\" fields.\n- For numeric questions: include \"correct_value\" (string) and \"tolerance\" (number). Do NOT include \"options\" or \"correct_index\" fields.\n- Keep explanations concise: 2-4 sentences maximum. Be rigorous but brief.\n\nFORMATTING RULES FOR MATH AND CURRENCY:\n- Wrap inline math in single dollar signs: $x^2 + 1$, $\\frac{a}{b}$.\n- Wrap display math in double dollar signs: $$\\int_0^1 x\\,dx$$.\n- Use standard LaTeX commands. KaTeX will render the output.\n- For currency amounts (US dollars, prices, money), write as plain text WITHOUT LaTeX wrapping. Example: \"Jenny has 5 dollars\" or \"Jenny has $5.00\" \u2014 but if you write the dollar sign, the rest of the sentence MUST NOT contain another loose dollar sign, or KaTeX will treat the text between them as math. Prefer writing \"5 dollars\" or \"USD 5.00\" to avoid ambiguity.\n- For simple integers and negatives in plain English (\"the temperature was -3 degrees\"), do NOT wrap in $...$ \u2014 write them as plain text.\n- Never use $...$ around non-mathematical content.\n\nReturn EXACTLY this JSON (no commentary, no markdown fences):\n{\n  \"questions\": [\n    {\n      \"id\": 1,\n      \"subject\": \"string\",\n      \"type\": \"mcq\",\n      \"text\": \"Question text. Use simple LaTeX in $...$ for math.\",\n      \"options\": ").concat(exampleOptions, ",\n      \"correct_index\": 0,\n      \"marks\": 1,\n      \"explanation\": \"Brief rigorous solution.\"\n    }\n  ]\n}\n\nNumeric question example:\n{\n  \"id\": 2,\n  \"subject\": \"string\",\n  \"type\": \"numeric\",\n  \"text\": \"...\",\n  \"correct_value\": \"42.5\",\n  \"tolerance\": 0.01,\n  \"marks\": 1,\n  \"explanation\": \"...\"\n}"); // Generate in batches of 10 to stay well under token limits.
+            genSystem = "You are an expert exam question writer. Generate exactly N fresh ORIGINAL practice questions matching the difficulty, subjects, and format of the sample provided. The exact count N will be specified in the user message.\n\nCRITICAL DISCIPLINE FOR CORRECTNESS:\nFor EACH question, follow this process before writing it:\n1. Decide the question and write it.\n2. Solve it yourself, step by step, in the \"explanation\" field. Be rigorous. Do not skip steps.\n3. The final value/result of your worked solution is the correct answer.\n4. For MCQ: write EXACTLY ".concat(numOptions, " options (labelled ").concat(optionLetters, ") where exactly one matches your worked solution. Set correct_index to the 0-based index of THAT option (0 to ").concat(numOptions - 1, "). Double-check by re-reading: \"the worked solution gives X; option [correct_index] is X; other options are not X.\"\n5. For numeric: set correct_value to the exact numeric result of your worked solution.\n\nSCHEMA RULES:\n- For MCQ questions: include \"options\" (array of EXACTLY ").concat(numOptions, " strings) and \"correct_index\" (integer 0 to ").concat(numOptions - 1, "). Do NOT include \"correct_value\" or \"tolerance\" fields.\n- For numeric questions: include \"correct_value\" (string) and \"tolerance\" (number). Do NOT include \"options\" or \"correct_index\" fields.\n- Keep explanations concise: 2-4 sentences maximum. Be rigorous but brief.\n\nFORMATTING RULES FOR MATH AND CURRENCY (very important \u2014 read carefully):\n- DO NOT wrap plain arithmetic in $...$ delimiters. For elementary problems like \"What is 34 + 47?\" or \"Find 12 \xD7 8\" or \"The next term: 1, 3, 5, 7, ?\", write the numbers and operators as plain ASCII text \u2014 no $ signs. This is the most common mistake. $...$ is ONLY for typeset mathematics with special notation.\n- DO wrap in $...$ only when you genuinely need LaTeX typesetting: fractions ($\\frac{1}{2}$), exponents that need superscript formatting ($x^2$, $8^{th}$), square roots ($\\sqrt{16}$), summations ($\\sum_{i=1}^n$), integrals, Greek letters, etc.\n- Write ordinals as plain text: \"8th\", \"21st\" \u2014 NOT \"$8^{th}$\".\n- Write simple arithmetic as plain text: \"34 + 47 = ?\", \"12 \xD7 8\", \"x = 5\" \u2014 NOT \"$34 + 47 = ?$\".\n- For exponents in plain prose, prefer \"x squared\" or \"x^2\" (plain text) over \"$x^2$\" unless the question specifically tests typeset notation.\n- For currency: write \"$5.00\" with a regular dollar sign. Never wrap currency in $...$ \u2014 that creates broken math.\n- For simple integers and negatives in plain English (\"the temperature was -3 degrees\"), do NOT wrap in $...$.\n- Default: when in doubt, use plain text. KaTeX is for genuine mathematical typesetting only.\n\nReturn EXACTLY this JSON (no commentary, no markdown fences):\n{\n  \"questions\": [\n    {\n      \"id\": 1,\n      \"subject\": \"string\",\n      \"type\": \"mcq\",\n      \"text\": \"Question text. Use simple LaTeX in $...$ for math.\",\n      \"options\": ").concat(exampleOptions, ",\n      \"correct_index\": 0,\n      \"marks\": 1,\n      \"explanation\": \"Brief rigorous solution.\"\n    }\n  ]\n}\n\nNumeric question example:\n{\n  \"id\": 2,\n  \"subject\": \"string\",\n  \"type\": \"numeric\",\n  \"text\": \"...\",\n  \"correct_value\": \"42.5\",\n  \"tolerance\": 0.01,\n  \"marks\": 1,\n  \"explanation\": \"...\"\n}"); // Generate in batches of 10 to stay well under token limits.
             // Each batch gets its own API call; we accumulate results.
             // Each subsequent batch is told what's already been generated so it
             // can avoid repeating concepts and surface forms.
